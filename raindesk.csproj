@@ -22,6 +22,9 @@
     <EnableMsixTooling Condition="'$(EnableMsixTooling)' == '' and '$(BuildingInsideVisualStudio)' == 'true'">true</EnableMsixTooling>
     <EnableMsixTooling Condition="'$(EnableMsixTooling)' == ''">false</EnableMsixTooling>
     <EnableWinAppRunSupport>true</EnableWinAppRunSupport>
+    <!-- The application now lives at the repository root. Keep sibling projects
+         and the legacy pre-move source directory out of SDK default globs. -->
+    <DefaultItemExcludes>$(DefaultItemExcludes);raindesk\**;raindesk.Tests\**;tools\**</DefaultItemExcludes>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
