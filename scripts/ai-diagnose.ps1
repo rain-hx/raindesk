@@ -15,10 +15,10 @@ param(
 
 $ErrorActionPreference = 'Stop'
 
-Import-Module (Join-Path $PSScriptRoot 'lib\rainspace-dev.psm1') -Force
+Import-Module (Join-Path $PSScriptRoot 'lib\raindesk-dev.psm1') -Force
 
 if ([string]::IsNullOrWhiteSpace($Root)) {
-    $Root = Get-RainspaceRoot
+    $Root = Get-raindeskRoot
 }
 
 if ([string]::IsNullOrWhiteSpace($OutputDir)) {
@@ -36,7 +36,7 @@ Add-Type @'
 using System;
 using System.Runtime.InteropServices;
 
-public static class rainspaceAiDiagNative
+public static class raindeskAiDiagNative
 {
     [StructLayout(LayoutKind.Sequential)]
     public struct RECT
@@ -112,12 +112,12 @@ function Get-WindowRectInfo([System.Windows.Automation.AutomationElement]$Window
     if ($nativeHandle -eq [IntPtr]::Zero -and $Process) { $nativeHandle = $Process.MainWindowHandle }
     if ($nativeHandle -eq [IntPtr]::Zero) { return $null }
 
-    $rect = New-Object rainspaceAiDiagNative+RECT
-    if (-not [rainspaceAiDiagNative]::GetWindowRect($nativeHandle, [ref]$rect)) { return $null }
+    $rect = New-Object raindeskAiDiagNative+RECT
+    if (-not [raindeskAiDiagNative]::GetWindowRect($nativeHandle, [ref]$rect)) { return $null }
 
     [ordered]@{
         Hwnd = ("0x{0:X}" -f $nativeHandle.ToInt64())
-        IsVisible = [rainspaceAiDiagNative]::IsWindowVisible($nativeHandle)
+        IsVisible = [raindeskAiDiagNative]::IsWindowVisible($nativeHandle)
         Rect = Convert-Rect $rect
     }
 }
@@ -179,11 +179,11 @@ function Save-WindowScreenshot(
     if ($nativeHandle -eq [IntPtr]::Zero -and $Process) { $nativeHandle = $Process.MainWindowHandle }
     if ($nativeHandle -eq [IntPtr]::Zero) { return $null }
 
-    [rainspaceAiDiagNative]::SetForegroundWindow($nativeHandle) | Out-Null
+    [raindeskAiDiagNative]::SetForegroundWindow($nativeHandle) | Out-Null
     Start-Sleep -Milliseconds 250
 
-    $rect = New-Object rainspaceAiDiagNative+RECT
-    if (-not [rainspaceAiDiagNative]::GetWindowRect($nativeHandle, [ref]$rect)) { return $null }
+    $rect = New-Object raindeskAiDiagNative+RECT
+    if (-not [raindeskAiDiagNative]::GetWindowRect($nativeHandle, [ref]$rect)) { return $null }
 
     $width = $rect.Right - $rect.Left
     $height = $rect.Bottom - $rect.Top
@@ -225,23 +225,23 @@ function Get-BackupSummary([string]$BakDir) {
     }
 }
 
-$runtime = Get-RainspaceRuntimePaths -Root $Root
-$devPaths = Get-RainspaceDevPaths -Root $Root
+$runtime = Get-raindeskRuntimePaths -Root $Root
+$devPaths = Get-raindeskDevPaths -Root $Root
 $commands = @()
 
 if ($RunBuild) {
-    $commands += Invoke-RainspaceDevCommand -Name 'build' -Command 'dotnet build rainspace\rainspace.csproj -c Debug -p:Platform=x64' -WorkingDirectory $Root -OutputPath (Join-Path $OutputDir 'build.txt')
+    $commands += Invoke-raindeskDevCommand -Name 'build' -Command 'dotnet build raindesk\raindesk.csproj -c Debug -p:Platform=x64' -WorkingDirectory $Root -OutputPath (Join-Path $OutputDir 'build.txt')
 }
 if ($RunTests) {
-    $commands += Invoke-RainspaceDevCommand -Name 'unit-tests' -Command 'dotnet test rainspace.Tests\rainspace.Tests.csproj -c Debug --logger "console;verbosity=minimal"' -WorkingDirectory $Root -OutputPath (Join-Path $OutputDir 'unit-tests.txt')
+    $commands += Invoke-raindeskDevCommand -Name 'unit-tests' -Command 'dotnet test raindesk.Tests\raindesk.Tests.csproj -c Debug --logger "console;verbosity=minimal"' -WorkingDirectory $Root -OutputPath (Join-Path $OutputDir 'unit-tests.txt')
 }
 if ($RunVerify) {
-    $commands += Invoke-RainspaceDevCommand -Name 'verify-icon-rendering' -Command '.\scripts\Verify-IconRenderingFix.ps1' -WorkingDirectory $Root -OutputPath (Join-Path $OutputDir 'verify-icon-rendering.txt')
+    $commands += Invoke-raindeskDevCommand -Name 'verify-icon-rendering' -Command '.\scripts\Verify-IconRenderingFix.ps1' -WorkingDirectory $Root -OutputPath (Join-Path $OutputDir 'verify-icon-rendering.txt')
 }
 
 $launchResult = $null
 if ($Launch) {
-    $launchResult = Start-RainspaceApp -Root $Root -TimeoutSeconds $TimeoutSeconds
+    $launchResult = Start-raindeskApp -Root $Root -TimeoutSeconds $TimeoutSeconds
     if (-not $launchResult.Process) {
         Write-Warning $launchResult.Message
     }
@@ -250,17 +250,17 @@ if ($Launch) {
     }
 }
 
-$process = Get-RainspaceProcess
+$process = Get-raindeskProcess
 $window = Find-AppWindow -Process $process
 $screenshotPath = Save-WindowScreenshot -Window $window -Process $process -Path (Join-Path $OutputDir 'current-window.png')
 
 $runtimeSnapshot = $null
 if ($RequestSnapshot) {
     if (-not $process) {
-        Write-Warning 'Skipping runtime snapshot because rainspace is not running.'
+        Write-Warning 'Skipping runtime snapshot because raindesk is not running.'
     }
     else {
-        $runtimeSnapshot = Request-RainspaceDevSnapshot -Reason 'ai-diagnose' -TimeoutSeconds $TimeoutSeconds
+        $runtimeSnapshot = Request-raindeskDevSnapshot -Reason 'ai-diagnose' -TimeoutSeconds $TimeoutSeconds
     }
 }
 
@@ -282,10 +282,10 @@ if ($process) {
     }
 }
 
-$sourceAssets = Join-Path $Root 'rainspace\Assets'
-$logs = Convert-RainspaceLogsForJson (Get-RainspaceLogSources -Root $Root -TailLines $LogTailLines)
+$sourceAssets = Join-Path $Root 'raindesk\Assets'
+$logs = Convert-raindeskLogsForJson (Get-raindeskLogSources -Root $Root -TailLines $LogTailLines)
 $report = [ordered]@{
-    Schema = 'rainspace.ai-diagnostics.v2'
+    Schema = 'raindesk.ai-diagnostics.v2'
     CreatedAt = (Get-Date).ToString('o')
     Root = $Root
     OutputDir = (Resolve-Path $OutputDir).Path
@@ -293,10 +293,10 @@ $report = [ordered]@{
         OutputPath = $runtime.OutputPath
         AppXPath = $runtime.AppXPath
         Manifest = $runtime.Manifest
-        Data = Get-RainspaceDataSummary -Path $runtime.DataPath
+        Data = Get-raindeskDataSummary -Path $runtime.DataPath
         Backups = Get-BackupSummary -BakDir $runtime.BackupPath
-        Assets = Get-RainspaceAssetSummary -AssetsPath $runtime.AssetsPath
-        SourceAssets = Get-RainspaceAssetSummary -AssetsPath $sourceAssets
+        Assets = Get-raindeskAssetSummary -AssetsPath $runtime.AssetsPath
+        SourceAssets = Get-raindeskAssetSummary -AssetsPath $sourceAssets
     }
     Dev = [ordered]@{
         DevDir = $devPaths.DevDir
@@ -327,7 +327,7 @@ $jsonText = $report | ConvertTo-Json -Depth 16 -Compress
 
 $summaryPath = Join-Path $OutputDir 'summary.txt'
 @(
-    'rainspace AI diagnostics'
+    'raindesk AI diagnostics'
     "CreatedAt: $($report.CreatedAt)"
     "Process: $(if ($process) { "$($process.ProcessName)#$($process.Id)" } else { 'not found' })"
     "WindowFound: $($report.Window.Found)"

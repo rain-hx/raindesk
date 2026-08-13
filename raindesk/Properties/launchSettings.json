@@ -1,0 +1,12 @@
+{
+  "profiles": {
+    "raindesk (Package)": {
+      "commandName": "MsixPackage",
+      "nativeDebugging": false
+    },
+    "raindesk (Unpackaged)": {
+      "commandName": "Project",
+      "nativeDebugging": false
+    }
+  }
+}

@@ -27,18 +27,18 @@ function Assert-NotContains([string]$content, [string]$pattern, [string]$message
     }
 }
 
-$registerUtil = Read-RepoFile 'rainspace\Util\RegisterUtil.cs'
+$registerUtil = Read-RepoFile 'raindesk\Util\RegisterUtil.cs'
 Assert-NotContains $registerUtil 'SetAutoStart\(bool enable\)\s*\{\s*\}' 'RegisterUtil.SetAutoStart is still a stub.'
 Assert-NotContains $registerUtil 'SetSelfStartinging\(bool enable, string appName\)\s*\{\s*\}' 'RegisterUtil.SetSelfStartinging is still a stub.'
 Assert-Contains $registerUtil 'CurrentVersion\\Run' 'RegisterUtil must write HKCU Run startup entries.'
 Assert-Contains $registerUtil 'IsAutoStart' 'RegisterUtil must expose startup state.'
 
-$httpUtil = Read-RepoFile 'rainspace\Util\HttpUtil.cs'
+$httpUtil = Read-RepoFile 'raindesk\Util\HttpUtil.cs'
 Assert-NotContains $httpUtil 'Get\(string url\)\s*=>\s*""' 'HttpUtil.Get is still a stub.'
 Assert-NotContains $httpUtil 'Post\(string url, string data\)\s*=>\s*""' 'HttpUtil.Post is still a stub.'
 Assert-Contains $httpUtil 'HttpClient|WebRequest|HttpWebRequest' 'HttpUtil must perform real HTTP requests.'
 
-$mainWindow = Read-RepoFile 'rainspace\MainWindow.xaml.cs'
+$mainWindow = Read-RepoFile 'raindesk\MainWindow.xaml.cs'
 Assert-NotContains $mainWindow 'RegisterCreateToDoHotKey\(bool showMsg\)\s*\{\s*\}' 'MainWindow.RegisterCreateToDoHotKey is still a stub.'
 Assert-Contains $mainWindow 'ToDoWindow\.Show' 'Todo hotkey must open the todo window.'
 Assert-NotContains $mainWindow 'ConfigWindow\.Show' 'Settings entry must render inline in the main window instead of opening ConfigWindow.'
@@ -60,7 +60,7 @@ Assert-Contains $mainWindow 'LeftColumn\.Width\s*=\s*new GridLength\(0\)' 'Inlin
 Assert-Contains $mainWindow 'LeftColumn\.Width\s*=\s*new GridLength\(0\)' 'Home view should keep the old middle menu column hidden.'
 Assert-NotContains $mainWindow 'FindName\(nameof\(InlineConfigPanel\)\)|FindName\(nameof\(ConfigPanel\)\)|FindName\(nameof\(InlineTodoPanel\)\)|FindName\(nameof\(TodoPanel\)\)' 'Inline panels must be present and hidden with Visibility instead of lazy-loaded with FindName.'
 
-$mainWindowXaml = Read-RepoFile 'rainspace\MainWindow.xaml'
+$mainWindowXaml = Read-RepoFile 'raindesk\MainWindow.xaml'
 Assert-Contains $mainWindowXaml 'Grid.Row="0"[\s\S]*?Background="Transparent"' 'Top bar should not draw a separate band over the page background.'
 Assert-Contains $mainWindowXaml 'x:Name="TopBarHost"' 'MainWindow must expose the top bar host for system non-client caption regions.'
 Assert-NotContains $mainWindowXaml 'x:Name="WindowTitleBarDragArea"' 'MainWindow must not keep the old SetTitleBar drag overlay.'
@@ -90,7 +90,7 @@ Assert-Contains $mainWindowXaml 'Grid\.Column="1"[\s\S]*?x:Name="InlineConfigPan
 Assert-Contains $mainWindowXaml 'InlineConfigPanel"[\s\S]*?Grid\.ColumnSpan="2"' 'Inline settings must span the freed middle column and right work area.'
 Assert-Contains $mainWindowXaml 'x:Name="LeftColumn"[\s\S]*?Width="0"' 'Middle menu column should be hidden by default.'
 
-$leftCardXaml = Read-RepoFile 'rainspace\Control\UserControls\PannelCard\LeftCardControl.xaml'
+$leftCardXaml = Read-RepoFile 'raindesk\Control\UserControls\PannelCard\LeftCardControl.xaml'
 Assert-Contains $leftCardXaml 'Background="#82FBFDFF"' 'Left menu card should allow the page background to show through.'
 Assert-Contains $leftCardXaml 'x:Name="MyCard"[\s\S]*?BorderBrush="Transparent"[\s\S]*?BorderThickness="0"' 'Left menu card should not draw a visible outline over the background.'
 Assert-NotContains $leftCardXaml 'ToDoList\.Count' 'Left menu card must not show the todo count block.'
@@ -103,7 +103,7 @@ Assert-Contains $leftCardXaml 'LineHeight="20"' 'Left menu text should have enou
 Assert-Contains $leftCardXaml 'FontSize="14"' 'Left menu text size should remain unchanged.'
 Assert-NotContains $leftCardXaml 'SelectedTextBlock' 'Left menu selected item must not render a duplicate text layer.'
 
-$configPanelXaml = Read-RepoFile 'rainspace\Control\UserControls\Config\ConfigPanel.xaml'
+$configPanelXaml = Read-RepoFile 'raindesk\Control\UserControls\Config\ConfigPanel.xaml'
 Assert-NotContains $configPanelXaml 'Tag="About"|Text="关于"' 'ConfigPanel must not render the About tab.'
 Assert-Contains $configPanelXaml 'Tag="Theme"' 'ConfigPanel must keep the display settings navigation item.'
 Assert-Contains $configPanelXaml 'Tag="Motion"' 'ConfigPanel must keep the motion navigation item.'
@@ -114,11 +114,11 @@ Assert-NotContains $configPanelXaml 'Text="设置"[\s\S]*?FontSize="18"' 'Config
 Assert-Contains $configPanelXaml 'x:Name="RootGlass"' 'ConfigPanel must expose a root glass surface for the settings acrylic backdrop.'
 Assert-Contains $configPanelXaml 'x:Name="GlassTint"[\s\S]*?LinearGradientBrush' 'ConfigPanel must keep a subtle glass tint layer over the acrylic backdrop.'
 
-$commonThemeXaml = Read-RepoFile 'rainspace\Resource\Dictionary\CommonTheme.xaml'
+$commonThemeXaml = Read-RepoFile 'raindesk\Resource\Dictionary\CommonTheme.xaml'
 Assert-Contains $commonThemeXaml 'ResourceDictionary.ThemeDictionaries' 'CommonTheme must define theme dictionaries.'
 Assert-Contains $commonThemeXaml 'x:Key="Dark"[\s\S]*?AppBackgroundBrush' 'CommonTheme must define dark semantic brushes.'
 
-$configPanelCode = Read-RepoFile 'rainspace\Control\UserControls\Config\ConfigPanel.xaml.cs'
+$configPanelCode = Read-RepoFile 'raindesk\Control\UserControls\Config\ConfigPanel.xaml.cs'
 Assert-NotContains $configPanelCode 'AboutControl|ShowPanel\("About"\)' 'ConfigPanel must not load the About page.'
 Assert-Contains $configPanelCode 'ShowPanel\("Theme"\)' 'ConfigPanel must open display settings by default.'
 Assert-Contains $configPanelCode 'new MotionControl\(\)' 'ConfigPanel must be able to open motion settings.'
@@ -129,16 +129,16 @@ Assert-Contains $configPanelCode 'TintLuminosityOpacity' 'ConfigPanel acrylic br
 Assert-Contains $configPanelCode 'PropertyChanged \+= Config_PropertyChanged' 'ConfigPanel must listen for BlurEffect changes.'
 Assert-Contains $configPanelCode 'nameof\(AppConfig\.BlurEffect\)' 'ConfigPanel glass backdrop must react to the BlurEffect setting.'
 
-$todoPanelXaml = Read-RepoFile 'rainspace\Control\UserControls\ToDo\TodoPanel.xaml'
+$todoPanelXaml = Read-RepoFile 'raindesk\Control\UserControls\ToDo\TodoPanel.xaml'
 Assert-Contains $todoPanelXaml '待办列表' 'Inline todo panel must keep the active todo list tab.'
 Assert-Contains $todoPanelXaml '历史待办' 'Inline todo panel must keep the history todo tab.'
 Assert-NotContains $todoPanelXaml 'Text="待办"[\s\S]*?FontSize="18"' 'TodoPanel must not render a duplicate todo title in the tab header.'
 
-$rightCardXaml = Read-RepoFile 'rainspace\Control\UserControls\PannelCard\RightCardControl.xaml'
-$rightCardCode = Read-RepoFile 'rainspace\Control\UserControls\PannelCard\RightCardControl.xaml.cs'
+$rightCardXaml = Read-RepoFile 'raindesk\Control\UserControls\PannelCard\RightCardControl.xaml'
+$rightCardCode = Read-RepoFile 'raindesk\Control\UserControls\PannelCard\RightCardControl.xaml.cs'
 Assert-Contains $rightCardXaml 'Background="#82FBFDFF"' 'Right shortcut card should allow the page background to show through.'
 Assert-Contains $rightCardXaml 'x:Name="WrapCard"[\s\S]*?BorderBrush="Transparent"[\s\S]*?BorderThickness="0"' 'Right shortcut card should not draw a visible outline over the background.'
-Assert-NotContains $rightCardXaml 'rainspaceCommandButtonStyle"\s*Click="AddUrlIcon"|rainspaceCommandButtonStyle"\s*Click="AddSystemIcon"|Text="URL"|Text="系统项目"' 'Shortcut panel title bar must not show top-right add buttons.'
+Assert-NotContains $rightCardXaml 'raindeskCommandButtonStyle"\s*Click="AddUrlIcon"|raindeskCommandButtonStyle"\s*Click="AddSystemIcon"|Text="URL"|Text="系统项目"' 'Shortcut panel title bar must not show top-right add buttons.'
 Assert-Contains $rightCardXaml 'Padding="14,10,14,12"' 'Right shortcut card should use tighter top padding.'
 Assert-Contains $rightCardXaml 'x:Name="TitleRow" Height="0"' 'Shortcut home view should hide the title row by default.'
 Assert-Contains $rightCardXaml 'x:Name="TitleBar"[\s\S]*?Visibility="Collapsed"' 'Shortcut home view should not render the My Shortcuts title bar.'
@@ -197,41 +197,41 @@ Assert-Contains $rightCardXaml 'Text="全部"[\s\S]*?FontSize="14"' 'Shortcut gr
 Assert-Contains $rightCardXaml '<TextBlock Text="\{Binding MenuName\}"[\s\S]*?FontSize="14"' 'Shortcut group menu labels should use the larger readable font size.'
 Assert-NotContains $rightCardXaml 'MyPoptip|MyPoptipContent' 'Shortcut hover path poptip must not be rendered.'
 
-$leftCardXaml = Read-RepoFile 'rainspace\Control\UserControls\PannelCard\LeftCardControl.xaml'
+$leftCardXaml = Read-RepoFile 'raindesk\Control\UserControls\PannelCard\LeftCardControl.xaml'
 Assert-NotContains $leftCardXaml 'Text="待办"[\s\S]*?ToDoList\.Count' 'Left menu card must not show the todo counter.'
 Assert-Contains $leftCardXaml 'Padding="3,2,3,2"' 'Left menu card must use tight compact padding.'
 
-$themeXaml = Read-RepoFile 'rainspace\Control\UserControls\Config\ThemeControl.xaml'
+$themeXaml = Read-RepoFile 'raindesk\Control\UserControls\Config\ThemeControl.xaml'
 Assert-Contains $themeXaml 'Click="Cancel_Click"' 'Theme settings cancel button must have a handler.'
 Assert-Contains $themeXaml 'Click="Save_Click"' 'Theme settings save button must have a handler.'
 
-$otherXaml = Read-RepoFile 'rainspace\Control\UserControls\Config\OtherControl.xaml'
+$otherXaml = Read-RepoFile 'raindesk\Control\UserControls\Config\OtherControl.xaml'
 Assert-Contains $otherXaml 'Click="CheckUpdate_Click"' 'Check update button must have a handler.'
 Assert-Contains $otherXaml 'UpdateTypeConvert' 'Other settings must expose update source selection.'
 
-$otherCode = Read-RepoFile 'rainspace\Control\UserControls\Config\OtherControl.xaml.cs'
+$otherCode = Read-RepoFile 'raindesk\Control\UserControls\Config\OtherControl.xaml.cs'
 Assert-Contains $otherCode 'CheckUpdate_Click' 'OtherControl must implement CheckUpdate_Click.'
 Assert-Contains $otherCode 'UpdateWindow\.Show|ShowInfoDialog' 'Manual update check must show a result.'
 
-$configXaml = Read-RepoFile 'rainspace\Control\Windows\ConfigWindow.xaml'
+$configXaml = Read-RepoFile 'raindesk\Control\Windows\ConfigWindow.xaml'
 Assert-NotContains $configXaml 'Tag="About"|Text="关于"' 'ConfigWindow must not render the About tab.'
 Assert-Contains $configXaml 'ListBoxItem IsSelected="True" Tag="Theme"' 'ConfigWindow must open display settings by default.'
 Assert-NotContains $configXaml 'Close_Button_Click' 'ConfigWindow must not render an extra inner close button.'
-Assert-NotContains $configXaml 'x:Name="RightCard"[\s\S]*?rainspacePanelStyle' 'ConfigWindow right content must not be wrapped in an extra panel box.'
+Assert-NotContains $configXaml 'x:Name="RightCard"[\s\S]*?raindeskPanelStyle' 'ConfigWindow right content must not be wrapped in an extra panel box.'
 Assert-NotContains $configXaml 'Style="\{StaticResource BorderBG\}"' 'ConfigWindow must not wrap its content in the old inner box border.'
 
-$configCode = Read-RepoFile 'rainspace\Control\Windows\ConfigWindow.xaml.cs'
+$configCode = Read-RepoFile 'raindesk\Control\Windows\ConfigWindow.xaml.cs'
 Assert-NotContains $configCode 'AboutControl|RightCard\.Child = about' 'ConfigWindow must not load the About page.'
 Assert-Contains $configCode 'RightCard\.Child = theme' 'ConfigWindow must default to display settings.'
 Assert-NotContains $configCode 'private static readonly AboutControl|private static readonly ThemeControl|private static readonly MotionControl|private static readonly OtherControl' 'ConfigWindow must not reuse static UserControl instances across windows.'
 Assert-NotContains $configCode 'if \(window != null\)\s*\{\s*window\.Close\(\);\s*\}' 'Opening settings twice must activate the existing settings window instead of closing and recreating it.'
 Assert-Contains $configCode 'window\.Activate\(\)' 'Opening settings twice must bring the existing settings window forward.'
 
-$rightCardXaml = Read-RepoFile 'rainspace\Control\UserControls\PannelCard\RightCardControl.xaml'
+$rightCardXaml = Read-RepoFile 'raindesk\Control\UserControls\PannelCard\RightCardControl.xaml'
 Assert-Contains $rightCardXaml 'InlineUrlPanel' 'URL add form must render inline in the right panel.'
 Assert-Contains $rightCardXaml 'InlineSystemPanel' 'System item picker must render inline in the right panel.'
 
-$rightCardCode = Read-RepoFile 'rainspace\Control\UserControls\PannelCard\RightCardControl.xaml.cs'
+$rightCardCode = Read-RepoFile 'raindesk\Control\UserControls\PannelCard\RightCardControl.xaml.cs'
 Assert-NotContains $rightCardCode 'private void AddUrlIcon[\s\S]*?DialogService\.Show' 'AddUrlIcon must not open an extra dialog.'
 Assert-NotContains $rightCardCode 'private void AddSystemIcon[\s\S]*?SystemItemWindow\.Show\(\)' 'AddSystemIcon must not open an extra window.'
 Assert-Contains $rightCardCode 'ShowInlineUrlPanel|ShowInlineSystemPanel' 'RightCardControl must switch to inline add panels.'
@@ -255,7 +255,7 @@ Assert-Contains $rightCardCode 'DeleteGroup\(MenuInfo menuInfo\)' 'RightCardCont
 Assert-NotContains $rightCardCode 'SetShortcutMoreIconVisibility|ShortcutMoreIcon' 'Shortcut more icon logic must be removed.'
 Assert-NotContains $rightCardCode 'MyPoptip|MyPoptipContent' 'Shortcut hover path poptip must not be opened from code.'
 
-$systemItemCode = Read-RepoFile 'rainspace\Control\UserControls\SystemItem\SystemItem.xaml.cs'
+$systemItemCode = Read-RepoFile 'raindesk\Control\UserControls\SystemItem\SystemItem.xaml.cs'
 Assert-NotContains $systemItemCode 'sender as StackPanel' 'System item click handler must read the icon from the clicked element tag.'
 
 $uiSmokeScript = Read-RepoFile 'scripts\ui-smoke.ps1'

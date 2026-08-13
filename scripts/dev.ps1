@@ -16,10 +16,10 @@ param(
 
 $ErrorActionPreference = 'Stop'
 
-$modulePath = Join-Path $PSScriptRoot 'lib\rainspace-dev.psm1'
+$modulePath = Join-Path $PSScriptRoot 'lib\raindesk-dev.psm1'
 Import-Module $modulePath -Force
 
-$Root = Get-RainspaceRoot -Start (Join-Path $PSScriptRoot 'lib')
+$Root = Get-raindeskRoot -Start (Join-Path $PSScriptRoot 'lib')
 $stamp = Get-Date -Format 'yyyyMMdd-HHmmss'
 $artifactRoot = Join-Path $Root "artifacts\dev-loop\$stamp"
 New-Item -ItemType Directory -Force -Path $artifactRoot | Out-Null
@@ -29,7 +29,7 @@ function Write-DevStep([string]$Message) {
 }
 
 function Invoke-DevBuild {
-    $project = Get-RainspaceProjectPath -Root $Root
+    $project = Get-raindeskProjectPath -Root $Root
     Write-DevStep "Building $project"
     & dotnet build $project -c Debug -p:Platform=x64
     if ($LASTEXITCODE -ne 0) {
@@ -38,7 +38,7 @@ function Invoke-DevBuild {
 }
 
 function Invoke-DevTests {
-    $testProject = Join-Path $Root 'rainspace.Tests\rainspace.Tests.csproj'
+    $testProject = Join-Path $Root 'raindesk.Tests\raindesk.Tests.csproj'
     $output = Join-Path $artifactRoot 'unit-tests.txt'
     Write-DevStep "Running unit tests"
     & dotnet test $testProject -c Debug -p:Platform=x64 --logger "console;verbosity=minimal" 2>&1 |
@@ -66,8 +66,8 @@ function Invoke-DevVerify {
         }
     }
 
-    $runtime = Get-RainspaceRuntimePaths -Root $Root
-    $assets = Get-RainspaceAssetSummary -AssetsPath (Join-Path $Root 'rainspace\Assets')
+    $runtime = Get-raindeskRuntimePaths -Root $Root
+    $assets = Get-raindeskAssetSummary -AssetsPath (Join-Path $Root 'raindesk\Assets')
     if ($assets.MissingCount -gt 0 -or $assets.PlaceholderCount -gt 0) {
         throw "App assets missing=$($assets.MissingCount), placeholder-like=$($assets.PlaceholderCount)"
     }
@@ -116,22 +116,22 @@ function Invoke-DevDiagnose {
 }
 
 function Invoke-DevSnapshot {
-    if (-not (Get-RainspaceProcess)) {
+    if (-not (Get-raindeskProcess)) {
         if ($Launch) {
             Write-DevStep 'Launching app for snapshot'
-            $launch = Start-RainspaceApp -Root $Root -BuildFirst:$BuildFirst -TimeoutSeconds $TimeoutSeconds
+            $launch = Start-raindeskApp -Root $Root -BuildFirst:$BuildFirst -TimeoutSeconds $TimeoutSeconds
             if (-not $launch.Process) {
                 throw $launch.Message
             }
             Start-Sleep -Seconds 2
         }
         else {
-            throw 'rainspace is not running. Use -Launch or start the app first.'
+            throw 'raindesk is not running. Use -Launch or start the app first.'
         }
     }
 
     Write-DevStep 'Requesting runtime snapshot from app'
-    $result = Request-RainspaceDevSnapshot -Reason $Command -TimeoutSeconds $TimeoutSeconds
+    $result = Request-raindeskDevSnapshot -Reason $Command -TimeoutSeconds $TimeoutSeconds
     $resultPath = Join-Path $artifactRoot 'snapshot-result.json'
     $result | ConvertTo-Json -Depth 20 | Set-Content -LiteralPath $resultPath -Encoding UTF8
 
@@ -159,7 +159,7 @@ switch ($Command) {
     'smoke' {
         if ($BuildFirst) { Invoke-DevBuild }
         if ($Launch) {
-            $launch = Start-RainspaceApp -Root $Root -TimeoutSeconds $TimeoutSeconds
+            $launch = Start-raindeskApp -Root $Root -TimeoutSeconds $TimeoutSeconds
             if (-not $launch.Process) { throw $launch.Message }
             Start-Sleep -Seconds 2
         }
@@ -181,7 +181,7 @@ switch ($Command) {
         }
 
         if ($Launch -or $RunSmoke) {
-            $launch = Start-RainspaceApp -Root $Root -TimeoutSeconds $TimeoutSeconds
+            $launch = Start-raindeskApp -Root $Root -TimeoutSeconds $TimeoutSeconds
             if (-not $launch.Process) {
                 throw $launch.Message
             }

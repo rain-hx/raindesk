@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Application
+    x:Class="raindesk.App"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:local="using:raindesk"
+    xmlns:cvt="using:raindesk.Converts">
+    <Application.Resources>
+        <ResourceDictionary>
+            <ResourceDictionary.MergedDictionaries>
+                <XamlControlsResources xmlns="using:Microsoft.UI.Xaml.Controls"/>
+                <ResourceDictionary Source="Resource/Dictionary/Geometry.xaml"/>
+                <ResourceDictionary Source="Resource/Dictionary/CommonTheme.xaml"/>
+                <ResourceDictionary Source="Resource/Dictionary/CommonStyle.xaml"/>
+            </ResourceDictionary.MergedDictionaries>
+
+            <cvt:BGStyleConvert x:Key="BGStyleConvert"/>
+            <cvt:Boolean2VisibilityConverter x:Key="MyBoolean2VisibilityConverter"/>
+            <cvt:Boolean2VisibilityConverter x:Key="Boolean2VisibilityConverter"/>
+            <cvt:EmptyStringToVisibilityConverter x:Key="EmptyStringToVisibilityConverter"/>
+            <cvt:TextToColorConverter x:Key="TextToColorConverter"/>
+            <cvt:StringToGeometryConverter x:Key="StringToGeometryConverter"/>
+            <cvt:StringAppendConvert x:Key="StringAppendConvert"/>
+            <cvt:Visibility2BooleanConverter x:Key="Visibility2BooleanConverter"/>
+            <cvt:HideTypeConvert x:Key="HideTypeConvert"/>
+            <cvt:SearchTypeConvert x:Key="SearchTypeConvert"/>
+            <cvt:SortTypeConvert x:Key="SortTypeConvert"/>
+            <cvt:UpdateTypeConvert x:Key="UpdateTypeConvert"/>
+            <cvt:MenuInfoConvert x:Key="MenuInfoConvert"/>
+            <cvt:TodoTaskExecConvert x:Key="TodoTaskExecConvert"/>
+        </ResourceDictionary>
+    </Application.Resources>
+</Application>

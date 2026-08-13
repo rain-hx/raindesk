@@ -14,7 +14,7 @@ namespace LegacyBackupMigrator
         {
             if (args.Length < 1)
             {
-                Console.WriteLine("Usage: LegacyBackupMigrator <input.bak> [output.json] [GeekDesk.exe]");
+                Console.WriteLine("Usage: LegacyBackupMigrator <input.bak> [output.json] [raindesk.exe]");
                 return 1;
             }
 
@@ -22,9 +22,9 @@ namespace LegacyBackupMigrator
             string outputPath = args.Length > 1
                 ? Path.GetFullPath(args[1])
                 : Path.ChangeExtension(inputPath, ".json");
-            string geekDeskExe = args.Length > 2
+            string raindeskExe = args.Length > 2
                 ? Path.GetFullPath(args[2])
-                : Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "GeekDesk.exe");
+                : Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "raindesk.exe");
 
             if (!File.Exists(inputPath))
             {
@@ -32,22 +32,22 @@ namespace LegacyBackupMigrator
                 return 1;
             }
 
-            if (!File.Exists(geekDeskExe))
+            if (!File.Exists(raindeskExe))
             {
-                Console.Error.WriteLine("GeekDesk.exe not found: " + geekDeskExe);
+                Console.Error.WriteLine("raindesk.exe not found: " + raindeskExe);
                 return 1;
             }
 
             try
             {
-                Assembly geekDeskAssembly = Assembly.LoadFrom(geekDeskExe);
+                Assembly raindeskAssembly = Assembly.LoadFrom(raindeskExe);
                 AppDomain.CurrentDomain.AssemblyResolve += (_, e) =>
-                    e.Name.StartsWith("GeekDesk,", StringComparison.Ordinal) ? geekDeskAssembly : null;
+                    e.Name.StartsWith("raindesk,", StringComparison.Ordinal) ? raindeskAssembly : null;
 
-                Type appDataType = geekDeskAssembly.GetType("GeekDesk.ViewModel.AppData", true);
+                Type appDataType = raindeskAssembly.GetType("raindesk.ViewModel.AppData", true);
                 var formatter = new BinaryFormatter
                 {
-                    Binder = new GeekDeskVersionBinder(geekDeskAssembly)
+                    Binder = new raindeskVersionBinder(raindeskAssembly)
                 };
 
                 object appData;
@@ -58,7 +58,7 @@ namespace LegacyBackupMigrator
 
                 if (appData == null || !appDataType.IsInstanceOfType(appData))
                 {
-                    Console.Error.WriteLine("Backup did not contain GeekDesk AppData.");
+                    Console.Error.WriteLine("Backup did not contain raindesk AppData.");
                     return 1;
                 }
 
@@ -107,18 +107,18 @@ namespace LegacyBackupMigrator
             return member is PropertyInfo property ? property.GetValue(target) : ((FieldInfo)member).GetValue(target);
         }
 
-        private sealed class GeekDeskVersionBinder : SerializationBinder
+        private sealed class raindeskVersionBinder : SerializationBinder
         {
             private readonly Assembly _assembly;
 
-            public GeekDeskVersionBinder(Assembly assembly)
+            public raindeskVersionBinder(Assembly assembly)
             {
                 _assembly = assembly;
             }
 
             public override Type BindToType(string assemblyName, string typeName)
             {
-                if (typeName.StartsWith("GeekDesk.", StringComparison.Ordinal))
+                if (typeName.StartsWith("raindesk.", StringComparison.Ordinal))
                 {
                     string shortName = typeName.Split(',')[0].Trim();
                     int plus = shortName.LastIndexOf('+');

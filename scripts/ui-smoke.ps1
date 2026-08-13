@@ -7,10 +7,10 @@ param(
 
 $ErrorActionPreference = 'Stop'
 
-Import-Module (Join-Path $PSScriptRoot 'lib\rainspace-dev.psm1') -Force
+Import-Module (Join-Path $PSScriptRoot 'lib\raindesk-dev.psm1') -Force
 
 if ([string]::IsNullOrWhiteSpace($Root)) {
-    $Root = Get-RainspaceRoot
+    $Root = Get-raindeskRoot
 }
 
 $artifactRoot = Join-Path $Root 'artifacts\ui-state'
@@ -25,7 +25,7 @@ Add-Type @'
 using System;
 using System.Runtime.InteropServices;
 
-public static class rainspaceUiSmokeNative
+public static class raindeskUiSmokeNative
 {
     [StructLayout(LayoutKind.Sequential)]
     public struct RECT
@@ -44,17 +44,17 @@ public static class rainspaceUiSmokeNative
 }
 '@
 
-function Get-rainspaceProcess {
-    Get-RainspaceProcess
+function Get-raindeskProcess {
+    Get-raindeskProcess
 }
 
-function Start-rainspaceIfNeeded {
-    $process = Get-RainspaceProcess
+function Start-raindeskIfNeeded {
+    $process = Get-raindeskProcess
     if ($process -or $NoLaunch) {
         return $process
     }
 
-    $launch = Start-RainspaceApp -Root $Root -TimeoutSeconds $TimeoutSeconds
+    $launch = Start-raindeskApp -Root $Root -TimeoutSeconds $TimeoutSeconds
     return $launch.Process
 }
 
@@ -165,11 +165,11 @@ function Save-WindowScreenshot(
         return $false
     }
 
-    [rainspaceUiSmokeNative]::SetForegroundWindow($nativeHandle) | Out-Null
+    [raindeskUiSmokeNative]::SetForegroundWindow($nativeHandle) | Out-Null
     Start-Sleep -Milliseconds 250
 
-    $rect = New-Object rainspaceUiSmokeNative+RECT
-    if (-not [rainspaceUiSmokeNative]::GetWindowRect($nativeHandle, [ref]$rect)) {
+    $rect = New-Object raindeskUiSmokeNative+RECT
+    if (-not [raindeskUiSmokeNative]::GetWindowRect($nativeHandle, [ref]$rect)) {
         return $false
     }
 
@@ -204,14 +204,14 @@ function Invoke-View([System.Windows.Automation.AutomationElement]$Window, [stri
     return Invoke-Element -Element $button
 }
 
-$process = Start-rainspaceIfNeeded
+$process = Start-raindeskIfNeeded
 if (-not $process) {
-    throw 'rainspace process was not found and could not be launched.'
+    throw 'raindesk process was not found and could not be launched.'
 }
 
 $window = Find-AppWindow -Process $process
 if (-not $window) {
-    throw "rainspace window was not found for process id $($process.Id)."
+    throw "raindesk window was not found for process id $($process.Id)."
 }
 
 $states = New-Object System.Collections.Generic.List[object]

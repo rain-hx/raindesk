@@ -11,7 +11,7 @@ param(
 $ErrorActionPreference = 'Stop'
 
 if ([string]::IsNullOrWhiteSpace($MsixPath)) {
-    $msix = Get-ChildItem -Recurse -Filter '*.msix' -Path (Join-Path $PSScriptRoot '..\rainspace\AppPackages') -ErrorAction SilentlyContinue |
+    $msix = Get-ChildItem -Recurse -Filter '*.msix' -Path (Join-Path $PSScriptRoot '..\raindesk\AppPackages') -ErrorAction SilentlyContinue |
         Select-Object -First 1
     if (-not $msix) {
         Write-Error 'No .msix artifact found. Build the package first (dotnet publish ... -p:GenerateAppxPackageOnBuild=true).'
@@ -26,8 +26,8 @@ if (-not (Test-Path -LiteralPath $MsixPath)) {
 Write-Host "MSIX: $MsixPath"
 
 $cert = New-SelfSignedCertificate -Type CodeSigningCert -Subject $PublisherSubject -CertStoreLocation Cert:\CurrentUser\My -KeyExportPolicy Exportable -NotAfter (Get-Date).AddDays(30)
-$certPath = Join-Path $env:TEMP 'rainspace-test.pfx'
-$certPassword = 'rainspace-ci-test'
+$certPath = Join-Path $env:TEMP 'raindesk-test.pfx'
+$certPassword = 'raindesk-ci-test'
 $securePassword = ConvertTo-SecureString $certPassword -AsPlainText -Force
 Export-PfxCertificate -Cert $cert -FilePath $certPath -Password $securePassword | Out-Null
 
@@ -60,9 +60,9 @@ Write-Host 'Package installed.'
 $installed = Get-AppxPackage -Name $PackageName -ErrorAction Stop
 Write-Host "Installed package: $($installed.Name) version $($installed.Version) at $($installed.InstallLocation)"
 
-$exePath = Join-Path $installed.InstallLocation 'rainspace.exe'
+$exePath = Join-Path $installed.InstallLocation 'raindesk.exe'
 if (-not (Test-Path -LiteralPath $exePath)) {
-    throw "rainspace.exe not found in package install location: $exePath"
+    throw "raindesk.exe not found in package install location: $exePath"
 }
 
 # Launch the packaged exe and wait for a live process (surrogate for a

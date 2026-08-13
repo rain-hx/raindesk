@@ -1,5 +1,5 @@
 param(
-    [string]$ProjectRoot = (Resolve-Path (Join-Path $PSScriptRoot '..\rainspace')).Path
+    [string]$ProjectRoot = (Resolve-Path (Join-Path $PSScriptRoot '..\raindesk')).Path
 )
 
 $ErrorActionPreference = 'Stop'

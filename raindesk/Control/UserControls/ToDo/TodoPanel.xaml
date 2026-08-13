@@ -1,0 +1,203 @@
+<UserControl x:Class="raindesk.Control.UserControls.Backlog.TodoPanel"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:todo="using:raindesk.Control.UserControls.ToDo"
+             mc:Ignorable="d"
+             HorizontalAlignment="Stretch"
+             VerticalAlignment="Stretch">
+    <UserControl.Resources>
+        <Style x:Key="TodoTabButtonStyle" TargetType="RadioButton">
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="BorderBrush" Value="Transparent"/>
+            <Setter Property="BorderThickness" Value="0,0,0,3"/>
+            <Setter Property="Foreground" Value="{ThemeResource AppForegroundBrush}"/>
+            <Setter Property="Padding" Value="16,0,16,11"/>
+            <Setter Property="MinWidth" Value="0"/>
+            <Setter Property="Height" Value="46"/>
+            <Setter Property="FontSize" Value="18"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="HorizontalContentAlignment" Value="Center"/>
+            <Setter Property="VerticalContentAlignment" Value="Center"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="RadioButton">
+                        <Grid Background="Transparent">
+                            <VisualStateManager.VisualStateGroups>
+                                <VisualStateGroup x:Name="CheckStates">
+                                    <VisualState x:Name="Unchecked"/>
+                                    <VisualState x:Name="Checked">
+                                        <Storyboard>
+                                            <ObjectAnimationUsingKeyFrames Storyboard.TargetName="ContentHost" Storyboard.TargetProperty="Foreground">
+                                                <DiscreteObjectKeyFrame KeyTime="0" Value="{ThemeResource raindeskBlueBrush}"/>
+                                            </ObjectAnimationUsingKeyFrames>
+                                            <ObjectAnimationUsingKeyFrames Storyboard.TargetName="Indicator" Storyboard.TargetProperty="Background">
+                                                <DiscreteObjectKeyFrame KeyTime="0" Value="{ThemeResource raindeskBlueBrush}"/>
+                                            </ObjectAnimationUsingKeyFrames>
+                                        </Storyboard>
+                                    </VisualState>
+                                    <VisualState x:Name="Indeterminate"/>
+                                </VisualStateGroup>
+                                <VisualStateGroup x:Name="CommonStates">
+                                    <VisualState x:Name="Normal"/>
+                                    <VisualState x:Name="PointerOver">
+                                        <Storyboard>
+                                            <DoubleAnimation Storyboard.TargetName="HoverPlate" Storyboard.TargetProperty="Opacity" To="1" Duration="0:0:0.12">
+                                                <DoubleAnimation.EasingFunction>
+                                                    <CubicEase EasingMode="EaseOut"/>
+                                                </DoubleAnimation.EasingFunction>
+                                            </DoubleAnimation>
+                                        </Storyboard>
+                                    </VisualState>
+                                    <VisualState x:Name="Pressed"/>
+                                    <VisualState x:Name="Disabled"/>
+                                </VisualStateGroup>
+                            </VisualStateManager.VisualStateGroups>
+                            <Border x:Name="HoverPlate"
+                                    Opacity="0"
+                                    Background="{ThemeResource AccentLightBrush}"
+                                    CornerRadius="8"
+                                    Margin="-10,-2,-10,7"/>
+                            <ContentPresenter x:Name="ContentHost"
+                                              Content="{TemplateBinding Content}"
+                                              Foreground="{TemplateBinding Foreground}"
+                                              FontSize="{TemplateBinding FontSize}"
+                                              FontWeight="{TemplateBinding FontWeight}"
+                                              HorizontalAlignment="Center"
+                                              VerticalAlignment="Center"
+                                              Margin="{TemplateBinding Padding}"/>
+                            <Border x:Name="Indicator"
+                                    Height="3"
+                                    Width="42"
+                                    CornerRadius="2"
+                                    Background="Transparent"
+                                    HorizontalAlignment="Center"
+                                    VerticalAlignment="Bottom"/>
+                        </Grid>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+    </UserControl.Resources>
+
+    <Grid HorizontalAlignment="Stretch"
+          VerticalAlignment="Stretch">
+        <Border x:Name="RootCard"
+                Background="{ThemeResource SubtleBrush}"
+                BorderBrush="{ThemeResource DividerBrush}"
+                BorderThickness="1"
+                CornerRadius="18"
+                HorizontalAlignment="Stretch"
+                VerticalAlignment="Stretch">
+            <Grid HorizontalAlignment="Stretch"
+                  VerticalAlignment="Stretch"
+                  Padding="18">
+            <Border x:Name="TaskListShell"
+                    Background="{ThemeResource SurfaceBrush}"
+                    BorderBrush="{ThemeResource CardBorderBrush}"
+                    BorderThickness="1"
+                    CornerRadius="16"
+                    Padding="30,26,30,18"
+                    HorizontalAlignment="Stretch"
+                    VerticalAlignment="Stretch">
+            <Grid HorizontalAlignment="Stretch"
+                  VerticalAlignment="Stretch">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="68"/>
+                    <RowDefinition Height="*"/>
+                </Grid.RowDefinitions>
+
+                <Grid Grid.Row="0"
+                      Padding="0"
+                      BorderThickness="0">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
+
+                    <ScrollViewer Grid.Column="0"
+                                  Margin="0,0,18,0"
+                                  HorizontalScrollMode="Auto"
+                                  HorizontalScrollBarVisibility="Hidden"
+                                  VerticalScrollMode="Disabled"
+                                  VerticalScrollBarVisibility="Disabled">
+                        <StackPanel Orientation="Horizontal"
+                                    Spacing="28"
+                                    VerticalAlignment="Center"
+                                    AutomationProperties.Name="待办选项卡">
+                            <RadioButton x:Name="ActiveTab"
+                                         Content="待办"
+                                         Tag="Active"
+                                         GroupName="TodoTabs"
+                                         Checked="TodoTab_Checked"
+                                         IsChecked="True"
+                                         Style="{StaticResource TodoTabButtonStyle}"/>
+                            <RadioButton Content="已完成"
+                                         x:Name="CompletedTab"
+                                         Tag="Completed"
+                                         GroupName="TodoTabs"
+                                         Checked="TodoTab_Checked"
+                                         Style="{StaticResource TodoTabButtonStyle}"/>
+                            <RadioButton Content="全部"
+                                         Tag="All"
+                                         GroupName="TodoTabs"
+                                         Checked="TodoTab_Checked"
+                                         Style="{StaticResource TodoTabButtonStyle}"/>
+                        </StackPanel>
+                    </ScrollViewer>
+
+                    <Button Grid.Column="1"
+                            Background="{ThemeResource raindeskBlueBrush}"
+                            Foreground="White"
+                            BorderThickness="0"
+                            Click="CreateTodo_Click"
+                            Padding="20,0"
+                            MinHeight="48"
+                            MinWidth="150"
+                            CornerRadius="12"
+                            VerticalAlignment="Center"
+                            AutomationProperties.Name="新建任务">
+                        <StackPanel Orientation="Horizontal"
+                                    Spacing="9"
+                                    VerticalAlignment="Center">
+                            <Border Width="20"
+                                    Height="20"
+                                    CornerRadius="10"
+                                    BorderBrush="{ThemeResource BadgeTextBrush}"
+                                    BorderThickness="1.5">
+                                <FontIcon Glyph="&#xE710;"
+                                          FontFamily="{StaticResource FluentIconFont}"
+                                          FontSize="12"
+                                          Foreground="White"/>
+                            </Border>
+                            <TextBlock Text="新建任务" FontSize="16" FontWeight="SemiBold"/>
+                        </StackPanel>
+                    </Button>
+                </Grid>
+
+                <todo:TaskListView
+                    x:Name="TaskListView"
+                    Grid.Row="1"
+                    HorizontalAlignment="Stretch"
+                    VerticalAlignment="Stretch"
+                    TaskClicked="OnTaskClicked"/>
+            </Grid>
+            </Border>
+
+            <ContentControl x:Name="TaskEditorHost"
+                            Visibility="Collapsed"
+                            Opacity="0"
+                            RenderTransformOrigin="0.5,0.5"
+                            HorizontalAlignment="Stretch"
+                            VerticalAlignment="Stretch"
+                            HorizontalContentAlignment="Stretch"
+                            VerticalContentAlignment="Stretch">
+                <ContentControl.RenderTransform>
+                    <CompositeTransform x:Name="TaskEditorTransform"/>
+                </ContentControl.RenderTransform>
+            </ContentControl>
+            </Grid>
+        </Border>
+    </Grid>
+</UserControl>

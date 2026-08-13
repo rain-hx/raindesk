@@ -1,0 +1,121 @@
+<UserControl x:Class="raindesk.Control.UserControls.Config.AboutControl"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:local="using:raindesk.Control.UserControls.PannelCard"
+             mc:Ignorable="d"
+             Background="Transparent"
+             d:DesignHeight="400" d:DesignWidth="500">
+
+    <UserControl.Resources>
+    </UserControl.Resources>
+    <Grid>
+        <Grid Margin="24,48,24,24">
+            <StackPanel Orientation="Vertical" HorizontalAlignment="Center" VerticalAlignment="Top">
+                <!-- App logo -->
+                <Image Source="ms-appx:///Assets/raindeskLogo.png"
+                       Width="96"
+                       Height="96"
+                       Stretch="Uniform"/>
+
+                <TextBlock Text="raindesk"
+                           FontSize="28"
+                           FontWeight="SemiBold"
+                           Foreground="{ThemeResource AppForegroundBrush}"
+                           HorizontalAlignment="Center"
+                           Margin="0,12,0,0"/>
+
+                <TextBlock x:Name="AppInfo" TextAlignment="Center"
+                           Text="Copyright ©  2021 raindesk V"
+                           FontSize="13"
+                           Foreground="{ThemeResource SecondaryTextBrush}"
+                           Margin="0,12,0,0"/>
+
+                <!-- Tech badges -->
+                <StackPanel Orientation="Horizontal" HorizontalAlignment="Center"
+                            Margin="0,12,0,0" VerticalAlignment="Center">
+                    <Border Background="#1182c3" Style="{StaticResource BadgeStyle}">
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock Text=".net " Foreground="{ThemeResource BadgeTextBrush}" FontSize="12"/>
+                            <TextBlock Text=">=8.0" Foreground="{ThemeResource BadgeTextBrush}" FontSize="12"/>
+                        </StackPanel>
+                    </Border>
+                    <Border Background="#1182c3" Style="{StaticResource BadgeStyle}">
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock Text="IDE " Foreground="{ThemeResource BadgeTextBrush}" FontSize="12"/>
+                            <TextBlock Text="VS2022" Foreground="{ThemeResource BadgeTextBrush}" FontSize="12"/>
+                        </StackPanel>
+                    </Border>
+
+                    <Border Background="#24292F" Style="{StaticResource BadgeStyle}"
+                               PointerEntered="SC_PointerEntered"
+                               PointerExited="SC_PointerExited"
+                               Tag="https://github.com/BookerLiu/raindesk"
+                               PointerPressed="SC_PointerPressed">
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock Text="GitHub " Foreground="{ThemeResource BadgeTextBrush}" FontSize="12"/>
+                            <TextBlock Text="Star" Foreground="{ThemeResource BadgeTextBrush}" FontSize="12"/>
+                        </StackPanel>
+                    </Border>
+
+                    <Border Background="#C71D23" Style="{StaticResource BadgeStyle}"
+                               PointerEntered="SC_PointerEntered"
+                               PointerExited="SC_PointerExited"
+                               Tag="https://gitee.com/BookerLiu/raindesk"
+                               PointerPressed="SC_PointerPressed">
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock Text="Gitee " Foreground="{ThemeResource BadgeTextBrush}" FontSize="12"/>
+                            <TextBlock Text="Star" Foreground="{ThemeResource BadgeTextBrush}" FontSize="12"/>
+                        </StackPanel>
+                    </Border>
+                </StackPanel>
+
+                <!-- Donation badges -->
+                <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,8,0,0">
+                    <Border Background="#04913B" Style="{StaticResource BadgeStyle}" x:Name="PublicWeChatPanel">
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock Text="公众号 " Foreground="{ThemeResource BadgeTextBrush}" FontSize="12"/>
+                            <TextBlock Text="抓几个娃" Foreground="{ThemeResource BadgeTextBrush}" FontSize="12"/>
+                        </StackPanel>
+                        <ToolTipService.ToolTip>
+                            <ToolTip>
+                                <Image x:Name="PublicWeChat" Width="150" Height="150" />
+                            </ToolTip>
+                        </ToolTipService.ToolTip>
+                    </Border>
+                    <Border Background="#1577FE" Style="{StaticResource BadgeStyle}">
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock Text="赞赏 " Foreground="{ThemeResource BadgeTextBrush}" FontSize="12"/>
+                            <TextBlock Text="支付宝" Foreground="{ThemeResource BadgeTextBrush}" FontSize="12"/>
+                        </StackPanel>
+                        <ToolTipService.ToolTip>
+                            <ToolTip>
+                                <Image x:Name="ZFBCode" Width="150" Height="150" />
+                            </ToolTip>
+                        </ToolTipService.ToolTip>
+                    </Border>
+                    <Border Background="#04913B" Style="{StaticResource BadgeStyle}">
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock Text="赞赏 " Foreground="{ThemeResource BadgeTextBrush}" FontSize="12"/>
+                            <TextBlock Text="微信" Foreground="{ThemeResource BadgeTextBrush}" FontSize="12"/>
+                        </StackPanel>
+                        <ToolTipService.ToolTip>
+                            <ToolTip>
+                                <Image x:Name="WeChatCode" Width="150" Height="150" />
+                            </ToolTip>
+                        </ToolTipService.ToolTip>
+                    </Border>
+                </StackPanel>
+
+                <!-- Disclaimer -->
+                <TextBlock Margin="0,20,0,0" FontSize="13" Width="240"
+                           TextAlignment="Center"
+                           Foreground="{ThemeResource SecondaryTextBrush}"
+                           Text="这是个人开发的程序,所有人可任意修改和免费使用(商用请联系作者)"
+                           TextWrapping="Wrap"/>
+            </StackPanel>
+        </Grid>
+    </Grid>
+
+</UserControl>

@@ -1,0 +1,79 @@
+<Window x:Class="raindesk.Control.Windows.GlobalColorPickerWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:local="using:raindesk.Control.Windows"
+        >
+    <!-- WinUI 3: WindowStyle/AllowsTransparency/Background=Transparent/ResizeMode removed -->
+    <Border CornerRadius="12"
+            Background="{ThemeResource CardBackgroundBrush}"
+            BorderBrush="{ThemeResource CardBorderBrush}"
+            BorderThickness="1"
+            Height="385"
+            Width="228"
+            Padding="0">
+        <Border.Shadow>
+            <ThemeShadow/>
+        </Border.Shadow>
+        <Grid>
+            <TextBlock Canvas.ZIndex="1000" Text="已复制"
+                       x:Name="CopySuccess"
+                       Visibility="Collapsed"
+                       Margin="138,300,0,0"
+                       Foreground="{ThemeResource SystemAccentColor}"
+                       FontWeight="SemiBold"/>
+
+            <!-- Close button in title bar -->
+            <Border PointerPressed="DragMove"
+                    VerticalAlignment="Top"
+                    CornerRadius="12,12,0,0"
+                    Height="36"
+                    Background="Transparent">
+                <Button Width="28" Height="28" MinWidth="44" MinHeight="44"
+                    Padding="0"
+                    Background="Transparent"
+                    BorderThickness="0"
+                    Margin="0,0,8,0"
+                    Click="Button_Click"
+                    HorizontalAlignment="Right"
+                    PointerEntered="Button_MouseEnter"
+                    PointerExited="Button_MouseLeave"
+                    VerticalAlignment="Center"
+                    Style="{StaticResource ButtonIcon}"
+                    Content="X"
+                    FontSize="11"
+                    Foreground="{ThemeResource SecondaryTextBrush}"
+                    AutomationProperties.Name="关闭"/>
+            </Border>
+
+            <StackPanel VerticalAlignment="Bottom" Margin="16,40,16,16">
+                <!-- Color hex input -->
+                <TextBlock Text="颜色值" FontSize="12" Foreground="{ThemeResource SecondaryTextBrush}" Margin="0,0,0,4"/>
+                <TextBox x:Name="ColorHexInput" Width="196" Height="36"
+                         FontSize="14" Text="#000000"
+                         VerticalContentAlignment="Center"
+                         Style="{StaticResource MyTextBoxStyle}"/>
+
+                <!-- Action buttons -->
+                <StackPanel Orientation="Horizontal" Margin="0,12,0,0" Spacing="8">
+                    <Button Content="关 闭" Width="92" Height="36"
+                            Style="{StaticResource MyBtnStyle}"
+                            Click="MyColorPicker_Canceled"
+                            AutomationProperties.Name="关闭"/>
+                    <Button Content="复 制" Width="92" Height="36"
+                            Style="{StaticResource AccentBtnStyle}"
+                            Click="MyColorPicker_Confirmed"
+                            AutomationProperties.Name="复制颜色值"/>
+                </StackPanel>
+
+                <!-- Confirm color button -->
+                <Button Content="确定颜色" Width="196" Height="36"
+                        Margin="0,8,0,0"
+                        Style="{StaticResource MyBtnStyle}"
+                        Click="MyColorPicker_Confirmed"
+                        AutomationProperties.Name="确定颜色"/>
+            </StackPanel>
+        </Grid>
+    </Border>
+</Window>

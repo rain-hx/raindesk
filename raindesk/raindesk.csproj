@@ -1,0 +1,152 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net8.0-windows10.0.26100.0</TargetFramework>
+    <TargetPlatformMinVersion>10.0.17763.0</TargetPlatformMinVersion>
+    <RootNamespace>raindesk</RootNamespace>
+    <AssemblyName>raindesk</AssemblyName>
+    <ApplicationTitle>raindesk</ApplicationTitle>
+    <ApplicationManifest>app.manifest</ApplicationManifest>
+    <Platforms>x86;x64;ARM64</Platforms>
+    <PlatformTarget Condition="'$(Platform)' == ''">x64</PlatformTarget>
+    <PlatformTarget Condition="'$(Platform)' != ''">$(Platform)</PlatformTarget>
+    <RuntimeIdentifiers>win-x86;win-x64;win-arm64</RuntimeIdentifiers>
+    <RuntimeIdentifier Condition="'$(Platform)' == ''">win-x64</RuntimeIdentifier>
+    <RuntimeIdentifier Condition="'$(Platform)' == 'x86'">win-x86</RuntimeIdentifier>
+    <RuntimeIdentifier Condition="'$(Platform)' == 'x64'">win-x64</RuntimeIdentifier>
+    <RuntimeIdentifier Condition="'$(Platform)' == 'ARM64'">win-arm64</RuntimeIdentifier>
+    <UseWinUI>true</UseWinUI>
+    <!-- dotnet run uses the unpackaged path; MSIX remains enabled in Visual Studio
+         or when explicitly requested with -p:EnableMsixTooling=true. -->
+    <WindowsPackageType Condition="'$(WindowsPackageType)' == '' and '$(BuildingInsideVisualStudio)' != 'true'">None</WindowsPackageType>
+    <EnableMsixTooling Condition="'$(EnableMsixTooling)' == '' and '$(BuildingInsideVisualStudio)' == 'true'">true</EnableMsixTooling>
+    <EnableMsixTooling Condition="'$(EnableMsixTooling)' == ''">false</EnableMsixTooling>
+    <EnableWinAppRunSupport>true</EnableWinAppRunSupport>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <!-- Release 在 PublishTrimmed 下触发裁剪分析。以下 IL 告警是历史遗留基线：
+         FileUtil WScript.Shell dynamic 调用、COM P/Invoke、System.Text.Json 反射。
+         允许它们作为已知技术债存在，但 -warnaserror 仍会把新增 CS/Nullable 告警视为错误。 -->
+    <WarningsNotAsErrors>IL2026;IL2050;IL2077</WarningsNotAsErrors>
+  </PropertyGroup>
+
+  <!-- Allow test project to access internal types -->
+  <ItemGroup>
+    <InternalsVisibleTo Include="raindesk.Tests" />
+  </ItemGroup>
+
+  <!-- Manifest references unqualified names (e.g. Square44x44Logo.png); map from scale-200 sources at build time. -->
+  <ItemGroup>
+    <_ManifestAssetAlias Include="Square44x44Logo.png">
+      <Source>Square44x44Logo.scale-200.png</Source>
+    </_ManifestAssetAlias>
+    <_ManifestAssetAlias Include="Square150x150Logo.png">
+      <Source>Square150x150Logo.scale-200.png</Source>
+    </_ManifestAssetAlias>
+    <_ManifestAssetAlias Include="SplashScreen.png">
+      <Source>SplashScreen.scale-200.png</Source>
+    </_ManifestAssetAlias>
+    <_ManifestAssetAlias Include="Wide310x150Logo.png">
+      <Source>Wide310x150Logo.scale-200.png</Source>
+    </_ManifestAssetAlias>
+  </ItemGroup>
+
+  <ItemGroup>
+    <Content Include="Assets\SplashScreen.scale-200.png" />
+    <Content Include="Assets\SplashScreen.png" />
+    <Content Include="Assets\LockScreenLogo.scale-200.png" />
+    <Content Include="Assets\Square150x150Logo.scale-200.png" />
+    <Content Include="Assets\Square150x150Logo.png" />
+    <Content Include="Assets\Square44x44Logo.scale-200.png" />
+    <Content Include="Assets\Square44x44Logo.png" />
+    <Content Include="Assets\Square44x44Logo.targetsize-24_altform-unplated.png" />
+    <Content Include="Assets\Square44x44Logo.targetsize-48_altform-lightunplated.png" />
+    <Content Include="Assets\StoreLogo.png" />
+    <Content Include="Assets\AppIcon.ico" />
+    <Content Include="Assets\raindeskLogo.png" />
+    <Content Include="Assets\raindeskLogo.svg" />
+    <Content Include="Assets\Wide310x150Logo.scale-200.png" />
+    <Content Include="Assets\Wide310x150Logo.png" />
+    <Content Include="Resource\Image\BacklogImg.png">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="Resource\Image\SystemIcon\*.png">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="Resource\Iconfont\iconfont.js">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="Resource\Iconfont\iconfont.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+  </ItemGroup>
+
+  <!-- Localized string resources -->
+  <ItemGroup>
+    <PRIResource Include="Strings\zh-CN\Resources.resw" />
+    <PRIResource Include="Strings\en-US\Resources.resw" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Manifest Include="$(ApplicationManifest)" />
+  </ItemGroup>
+
+  <ItemGroup Condition="'$(DisableMsixProjectCapabilityAddedByProject)'!='true' and '$(EnableMsixTooling)'=='true'">
+    <ProjectCapability Include="Msix" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.Windows.SDK.BuildTools" Version="10.0.28000.1839" />
+    <PackageReference Include="Microsoft.WindowsAppSDK" Version="2.1.3" />
+    <PackageReference Include="Microsoft.Windows.SDK.BuildTools.WinApp" Version="0.3.1">
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+      <PrivateAssets>all</PrivateAssets>
+    </PackageReference>
+    <PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
+    <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="8.0.1" />
+    <PackageReference Include="System.Security.Permissions" Version="8.0.0" />
+    <PackageReference Include="NPinyin.Core" Version="3.0.0" />
+    <PackageReference Include="Quartz" Version="3.8.1" />
+    <PackageReference Include="System.Configuration.ConfigurationManager" Version="8.0.1" />
+    <PackageReference Include="System.Drawing.Common" Version="8.0.0" />
+    <PackageReference Include="System.Management" Version="8.0.0" />
+    <PackageReference Include="System.ServiceProcess.ServiceController" Version="8.0.1" />
+  </ItemGroup>
+
+  <PropertyGroup Condition="'$(DisableHasPackageAndPublishMenuAddedByProject)'!='true' and '$(EnableMsixTooling)'=='true'">
+    <HasPackageAndPublishMenu>true</HasPackageAndPublishMenu>
+  </PropertyGroup>
+
+  <!-- Publish Properties -->
+  <PropertyGroup>
+    <PublishReadyToRun Condition="'$(Configuration)' == 'Debug'">False</PublishReadyToRun>
+    <PublishReadyToRun Condition="'$(Configuration)' != 'Debug'">True</PublishReadyToRun>
+    <PublishTrimmed Condition="'$(Configuration)' == 'Debug'">False</PublishTrimmed>
+    <PublishTrimmed Condition="'$(Configuration)' != 'Debug'">True</PublishTrimmed>
+  </PropertyGroup>
+
+  <Target Name="CopyManifestAssetAliases" AfterTargets="CopyFilesToOutputDirectory">
+    <Copy SourceFiles="@(_ManifestAssetAlias->'$(ProjectDir)Assets\%(Source)')"
+          DestinationFiles="@(_ManifestAssetAlias->'$(OutputPath)Assets\%(Identity)')"
+          SkipUnchangedFiles="true"
+          Condition="Exists('$(ProjectDir)Assets\%(_ManifestAssetAlias.Source)')" />
+  </Target>
+
+  <Target Name="CopyManifestAssetAliasesToLooseLayout"
+          AfterTargets="_WinAppCopyContentToLooseLayout"
+          BeforeTargets="RunPackagedApp"
+          Condition="'$(WinAppLooseLayoutPath)' != ''">
+    <Copy SourceFiles="@(_ManifestAssetAlias->'$(ProjectDir)Assets\%(Source)')"
+          DestinationFiles="@(_ManifestAssetAlias->'$(WinAppLooseLayoutPath)Assets\%(Identity)')"
+          SkipUnchangedFiles="true"
+          Condition="Exists('$(ProjectDir)Assets\%(_ManifestAssetAlias.Source)')" />
+  </Target>
+
+  <Target Name="CopyXamlCompiledResourcesToWinAppLooseLayout" AfterTargets="_WinAppCopyContentToLooseLayout" BeforeTargets="RunPackagedApp" Condition="'$(EnableWinAppRunSupport)' == 'true' and '$(WindowsPackageType)' != 'None'">
+    <ItemGroup>
+      <XamlCompiledResources Include="$(OutputPath)**\*.xbf" Exclude="$(WinAppLooseLayoutPath)**\*.xbf" />
+    </ItemGroup>
+    <Copy SourceFiles="@(XamlCompiledResources)" DestinationFiles="@(XamlCompiledResources->'$(WinAppLooseLayoutPath)%(RecursiveDir)%(Filename)%(Extension)')" SkipUnchangedFiles="true" Condition="'@(XamlCompiledResources)' != ''" />
+  </Target>
+</Project>
