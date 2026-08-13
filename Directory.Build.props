@@ -1,7 +1,0 @@
-<?xml version="1.0" encoding="utf-8"?>
-<Project>
-  <!-- Visual Studio parallel nodes can crash the XAML compiler (MSB4166). -->
-  <PropertyGroup Condition="'$(BuildingInsideVisualStudio)' == 'true'">
-    <BuildInParallel>false</BuildInParallel>
-  </PropertyGroup>
-</Project>
