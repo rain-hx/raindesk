@@ -22,6 +22,9 @@ artifacts/
 *.coverage
 *.coveragexml
 
+# Local test project (not published in this source-only repository)
+raindesk.Tests/
+
 # NuGet
 *.nupkg
 *.snupkg
