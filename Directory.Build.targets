@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project>
+  <!-- Override NuGet RunPackagedApp after Sdk.targets so dev launch does not fail the build. -->
+  <Target Name="_RainspaceStopRunningInstance"
+          BeforeTargets="RunPackagedApp"
+          Condition="'$(MSBuildProjectName)' == 'rainspace' and '$(EnableWinAppRunSupport)' == 'true'">
+    <Exec Command="taskkill /IM rainspace.exe /F /T"
+          IgnoreExitCode="true"
+          ContinueOnError="true" />
+  </Target>
+
+  <!-- RunPackagedApp must build first; loose-layout copy reads apphost.exe from obj output. -->
+  <Target Name="_RainspacePreparePackagedRun"
+          Condition="'$(MSBuildProjectName)' == 'rainspace' and '$(EnableWinAppRunSupport)' == 'true' and '$(WindowsPackageType)' != 'None'">
+    <CallTarget Targets="Build" />
+    <CallTarget Targets="_WinAppBuildRunArgs;_WinAppCopyContentToLooseLayout" />
+  </Target>
+
+  <Target Name="RunPackagedApp"
+          DependsOnTargets="_RainspacePreparePackagedRun"
+          Condition="'$(MSBuildProjectName)' == 'rainspace' and '$(EnableWinAppRunSupport)' == 'true' and '$(WindowsPackageType)' != 'None'">
+    <Message Text="[rainspace] Launching packaged application..." Importance="high" />
+    <Exec Command="&quot;$(WinAppCliPath)&quot; $(_WinAppRunArgs)"
+          WorkingDirectory="$(MSBuildProjectDirectory)"
+          IgnoreExitCode="true" />
+  </Target>
+</Project>

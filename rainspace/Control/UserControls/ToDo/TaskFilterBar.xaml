@@ -1,0 +1,44 @@
+<UserControl
+    x:Class="rainspace.Control.UserControls.ToDo.TaskFilterBar"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    mc:Ignorable="d"
+    HorizontalAlignment="Stretch">
+
+    <StackPanel Spacing="8" Padding="12,8">
+        <StackPanel Orientation="Horizontal" Spacing="8">
+            <TextBlock Text="状态:" VerticalAlignment="Center" Width="40"/>
+            <RadioButton x:Name="StatusAll" Content="全部" Tag="All" Checked="OnStatusFilterChanged" IsChecked="True"/>
+            <RadioButton x:Name="StatusActive" Content="进行中" Tag="Active" Checked="OnStatusFilterChanged"/>
+            <RadioButton x:Name="StatusCompleted" Content="已完成" Tag="Completed" Checked="OnStatusFilterChanged"/>
+        </StackPanel>
+
+        <StackPanel Orientation="Horizontal" Spacing="8">
+            <TextBlock Text="优先级:" VerticalAlignment="Center" Width="40"/>
+            <RadioButton x:Name="PriorityAll" Content="全部" Tag="All" Checked="OnPriorityFilterChanged" IsChecked="True"/>
+            <RadioButton x:Name="PriorityHigh" Content="高" Tag="High" Checked="OnPriorityFilterChanged"/>
+            <RadioButton x:Name="PriorityMedium" Content="中" Tag="Medium" Checked="OnPriorityFilterChanged"/>
+            <RadioButton x:Name="PriorityLow" Content="低" Tag="Low" Checked="OnPriorityFilterChanged"/>
+        </StackPanel>
+
+        <StackPanel Orientation="Horizontal" Spacing="8">
+            <TextBlock Text="日期:" VerticalAlignment="Center" Width="40"/>
+            <RadioButton x:Name="DateAll" Content="全部" Tag="All" Checked="OnDateFilterChanged" IsChecked="True"/>
+            <RadioButton x:Name="DateToday" Content="今天" Tag="Today" Checked="OnDateFilterChanged"/>
+            <RadioButton x:Name="DateThisWeek" Content="本周" Tag="ThisWeek" Checked="OnDateFilterChanged"/>
+            <RadioButton x:Name="DateOverdue" Content="已过期" Tag="Overdue" Checked="OnDateFilterChanged"/>
+        </StackPanel>
+
+        <StackPanel Orientation="Horizontal" Spacing="8">
+            <TextBlock Text="排序:" VerticalAlignment="Center" Width="40"/>
+            <ComboBox x:Name="SortComboBox" SelectionChanged="OnSortChanged">
+                <ComboBoxItem Content="截止日期" Tag="DueDate"/>
+                <ComboBoxItem Content="优先级" Tag="Priority"/>
+                <ComboBoxItem Content="创建时间" Tag="CreatedAt"/>
+                <ComboBoxItem Content="手动" Tag="Manual"/>
+            </ComboBox>
+        </StackPanel>
+    </StackPanel>
+</UserControl>

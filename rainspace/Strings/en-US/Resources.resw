@@ -1,0 +1,21 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <data name="Tray_OpenPanel" xml:space="preserve">
+    <value>Open Panel</value>
+  </data>
+  <data name="Tray_ExportBackup" xml:space="preserve">
+    <value>Backup Data</value>
+  </data>
+  <data name="Tray_ImportBackup" xml:space="preserve">
+    <value>Import Backup</value>
+  </data>
+  <data name="Tray_OpenAppDir" xml:space="preserve">
+    <value>App Directory</value>
+  </data>
+  <data name="Tray_RestartApp" xml:space="preserve">
+    <value>Restart</value>
+  </data>
+  <data name="Tray_ExitApp" xml:space="preserve">
+    <value>Exit</value>
+  </data>
+</root>

@@ -1,0 +1,21 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <data name="Tray_OpenPanel" xml:space="preserve">
+    <value>打开面板</value>
+  </data>
+  <data name="Tray_ExportBackup" xml:space="preserve">
+    <value>备份数据</value>
+  </data>
+  <data name="Tray_ImportBackup" xml:space="preserve">
+    <value>导入备份</value>
+  </data>
+  <data name="Tray_OpenAppDir" xml:space="preserve">
+    <value>程序目录</value>
+  </data>
+  <data name="Tray_RestartApp" xml:space="preserve">
+    <value>重启</value>
+  </data>
+  <data name="Tray_ExitApp" xml:space="preserve">
+    <value>退出</value>
+  </data>
+</root>

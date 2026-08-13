@@ -1,0 +1,22 @@
+<Window x:Class="ShowSeconds.SecondsWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        mc:Ignorable="d">
+
+    <Window.SystemBackdrop>
+        <MicaBackdrop />
+    </Window.SystemBackdrop>
+
+    <Grid>
+        <Border x:Name="BGBorder" CornerRadius="8" Padding="16">
+            <TextBlock x:Name="SecondsText" HorizontalAlignment="Center"
+                       VerticalAlignment="Center"
+                       FontSize="25"
+                       FontWeight="Bold"
+                       Foreground="White"
+                       Text="{Binding Seconds}"/>
+        </Border>
+    </Grid>
+</Window>

@@ -1,0 +1,219 @@
+<UserControl
+    x:Class="rainspace.Control.UserControls.ToDo.TaskListView"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    xmlns:todo="using:rainspace.Control.UserControls.ToDo"
+    xmlns:vm="using:rainspace.ViewModel"
+    mc:Ignorable="d"
+    HorizontalAlignment="Stretch"
+    VerticalAlignment="Stretch">
+
+    <UserControl.Resources>
+        <Style x:Key="TaskBatchButtonStyle" TargetType="Button">
+            <Setter Property="MinHeight" Value="32"/>
+            <Setter Property="Padding" Value="12,0"/>
+            <Setter Property="CornerRadius" Value="8"/>
+            <Setter Property="FontSize" Value="13"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="Background" Value="{ThemeResource SurfaceBrush}"/>
+            <Setter Property="BorderBrush" Value="{ThemeResource ControlBorderBrush}"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="Foreground" Value="{ThemeResource AppForegroundBrush}"/>
+        </Style>
+    </UserControl.Resources>
+
+    <Grid HorizontalAlignment="Stretch"
+          VerticalAlignment="Stretch">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+
+        <TextBox
+            Grid.Row="0"
+            x:Name="SearchBox"
+            PlaceholderText="搜索任务..."
+            TextChanged="OnSearchTextChanged"
+            Style="{StaticResource MyTextBoxStyle}"
+            AutomationProperties.Name="搜索任务"
+            Visibility="Collapsed"
+            Margin="0"/>
+
+        <todo:TaskFilterBar
+            Grid.Row="1"
+            x:Name="FilterBar"
+            Visibility="Collapsed"
+            Margin="0"/>
+
+        <Border
+            Grid.Row="2"
+            x:Name="BatchToolbar"
+            Margin="0,8,0,2"
+            Padding="8"
+            CornerRadius="10"
+            Background="{ThemeResource AccentLightBrush}"
+            BorderBrush="{ThemeResource ControlBorderBrush}"
+            BorderThickness="1"
+            Visibility="Collapsed">
+            <StackPanel Orientation="Horizontal"
+                        Spacing="8">
+                <Button Content="全选" Style="{StaticResource TaskBatchButtonStyle}" Click="OnSelectAll"/>
+                <Button Content="完成选中" Style="{StaticResource TaskBatchButtonStyle}" Click="OnCompleteSelected"/>
+                <Button Content="删除选中" Style="{StaticResource TaskBatchButtonStyle}" Click="OnDeleteSelected"/>
+                <Button Content="设置优先级" Style="{StaticResource TaskBatchButtonStyle}" Click="OnSetPrioritySelected"/>
+                <Button Content="移动到项目" Style="{StaticResource TaskBatchButtonStyle}" Click="OnMoveToProjectSelected"/>
+                <Button Content="取消选择" Style="{StaticResource TaskBatchButtonStyle}" Click="OnCancelSelection"/>
+            </StackPanel>
+        </Border>
+
+        <ListView
+            Grid.Row="3"
+            x:Name="TaskList"
+            ItemsSource="{x:Bind VisibleTasks, Mode=OneWay}"
+            Background="Transparent"
+            BorderThickness="0"
+            Padding="0,8,0,0"
+            SelectionMode="None"
+            IsItemClickEnabled="False"
+            ItemClick="OnTaskItemClick"
+            CanDragItems="True"
+            CanReorderItems="True"
+            AllowDrop="True"
+            ContainerContentChanging="OnTaskContainerContentChanging">
+            <ListView.ItemContainerTransitions>
+                <TransitionCollection>
+                    <AddDeleteThemeTransition/>
+                    <RepositionThemeTransition IsStaggeringEnabled="False"/>
+                </TransitionCollection>
+            </ListView.ItemContainerTransitions>
+            <ListView.ItemContainerStyle>
+                <Style TargetType="ListViewItem">
+                    <Setter Property="Padding" Value="0"/>
+                    <Setter Property="Margin" Value="0"/>
+                    <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
+                    <Setter Property="BorderThickness" Value="0"/>
+                    <Setter Property="Background" Value="Transparent"/>
+                    <Setter Property="MinHeight" Value="0"/>
+                </Style>
+            </ListView.ItemContainerStyle>
+            <ListView.ItemTemplate>
+                <DataTemplate x:DataType="vm:ToDoTask">
+                    <todo:TaskItemControl
+                        Task="{Binding}"
+                        TaskClicked="OnTaskControlClicked"
+                        SelectionChanged="OnTaskControlSelectionChanged"/>
+                </DataTemplate>
+            </ListView.ItemTemplate>
+        </ListView>
+
+        <StackPanel
+            Grid.Row="3"
+            x:Name="EmptyState"
+            VerticalAlignment="Center"
+            HorizontalAlignment="Center"
+            Spacing="12"
+            Visibility="Collapsed">
+            <Viewbox Width="360"
+                     Height="220"
+                     Stretch="Uniform"
+                     Margin="0,0,0,8">
+                <Canvas Width="360" Height="220">
+                    <Ellipse Width="260" Height="52" Canvas.Left="52" Canvas.Top="155" Fill="#EAF3FF"/>
+                    <Ellipse Width="74" Height="56" Canvas.Left="52" Canvas.Top="105" Fill="#E8F2FF"/>
+                    <Ellipse Width="112" Height="74" Canvas.Left="89" Canvas.Top="82" Fill="#EEF6FF"/>
+                    <Ellipse Width="118" Height="72" Canvas.Left="199" Canvas.Top="94" Fill="#EEF6FF"/>
+
+                    <Path Fill="#CFE4FF" Data="M70,143 C78,126 95,114 112,109 C101,125 92,137 86,156 Z"/>
+                    <Path Fill="#AFCDF8" Data="M86,153 C96,134 111,126 132,124 C119,139 105,151 88,162 Z"/>
+                    <Rectangle Width="22" Height="44" Canvas.Left="83" Canvas.Top="151" RadiusX="6" RadiusY="6" Fill="#95BDEB"/>
+                    <Rectangle Width="30" Height="10" Canvas.Left="79" Canvas.Top="148" RadiusX="5" RadiusY="5" Fill="#6DA6E8"/>
+
+                    <Border Canvas.Left="139"
+                            Canvas.Top="50"
+                            Width="92"
+                            Height="132"
+                            CornerRadius="13">
+                        <Border.Background>
+                            <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
+                                <GradientStop Color="#35A8FF" Offset="0"/>
+                                <GradientStop Color="#006CF5" Offset="1"/>
+                            </LinearGradientBrush>
+                        </Border.Background>
+                    </Border>
+                    <Border Canvas.Left="150"
+                            Canvas.Top="62"
+                            Width="70"
+                            Height="104"
+                            CornerRadius="7"
+                            Background="#F9FCFF"/>
+                    <Border Canvas.Left="166"
+                            Canvas.Top="42"
+                            Width="48"
+                            Height="23"
+                            CornerRadius="6"
+                            Background="#B8CCE8"/>
+                    <Ellipse Width="18" Height="18" Canvas.Left="181" Canvas.Top="34" Stroke="#90AFD8" StrokeThickness="5"/>
+
+                    <Path Stroke="#2B96F6" StrokeThickness="7" StrokeStartLineCap="Round" StrokeEndLineCap="Round" StrokeLineJoin="Round" Data="M162,88 L172,99 L190,76"/>
+                    <Path Stroke="#2B96F6" StrokeThickness="7" StrokeStartLineCap="Round" StrokeEndLineCap="Round" StrokeLineJoin="Round" Data="M162,122 L171,131 L187,113"/>
+                    <Rectangle Width="42" Height="5" Canvas.Left="196" Canvas.Top="86" RadiusX="2.5" RadiusY="2.5" Fill="#D8E4F2"/>
+                    <Rectangle Width="28" Height="5" Canvas.Left="196" Canvas.Top="101" RadiusX="2.5" RadiusY="2.5" Fill="#D8E4F2"/>
+                    <Rectangle Width="36" Height="5" Canvas.Left="196" Canvas.Top="124" RadiusX="2.5" RadiusY="2.5" Fill="#D8E4F2"/>
+                    <Rectangle Width="60" Height="5" Canvas.Left="166" Canvas.Top="148" RadiusX="2.5" RadiusY="2.5" Fill="#D8E4F2"/>
+
+                    <Path Fill="#CFE2FF" Data="M228,130 L312,121 L291,153 L211,162 Z"/>
+                    <Path Fill="#F8FBFF" Data="M245,145 L317,155 L283,184 L214,172 Z"/>
+                    <Path Fill="#EAF3FF" Data="M245,145 L214,172 L214,132 L245,122 Z"/>
+                    <Path Fill="#DDEBFF" Data="M245,145 L283,184 L283,139 L245,122 Z"/>
+                    <Path Fill="#FFFFFF" Data="M245,122 L291,112 L317,125 L274,139 Z"/>
+
+                    <TextBlock Canvas.Left="108" Canvas.Top="56" Text="✦" FontSize="20" Foreground="#BDD8FF"/>
+                    <TextBlock Canvas.Left="276" Canvas.Top="47" Text="✦" FontSize="18" Foreground="#BDD8FF"/>
+                    <TextBlock Canvas.Left="118" Canvas.Top="125" Text="✦" FontSize="14" Foreground="#D2E4FF"/>
+                    <TextBlock Canvas.Left="272" Canvas.Top="86" Text="✦" FontSize="14" Foreground="#D2E4FF"/>
+                </Canvas>
+            </Viewbox>
+            <TextBlock
+                Text="暂无任务"
+                FontSize="24"
+                FontWeight="Bold"
+                Foreground="{ThemeResource AppForegroundBrush}"
+                HorizontalAlignment="Center"/>
+            <TextBlock
+                Text="点击新建按钮添加第一个任务"
+                FontSize="16"
+                Foreground="{ThemeResource SecondaryTextBrush}"
+                HorizontalAlignment="Center"/>
+        </StackPanel>
+
+        <Border Grid.Row="4"
+                BorderBrush="{ThemeResource DividerBrush}"
+                BorderThickness="0,1,0,0"
+                Padding="10,18,0,0"
+                Background="Transparent">
+            <StackPanel Orientation="Horizontal"
+                        Spacing="40">
+                <TextBlock
+                    x:Name="ActiveCount"
+                    FontSize="16"
+                    FontWeight="SemiBold"
+                    Foreground="{ThemeResource rainspaceBlueBrush}"/>
+                <TextBlock
+                    x:Name="CompletedCount"
+                    FontSize="16"
+                    FontWeight="SemiBold"
+                    Foreground="{ThemeResource AppForegroundBrush}"/>
+                <TextBlock
+                    x:Name="OverdueCount"
+                    FontSize="16"
+                    FontWeight="SemiBold"
+                    Foreground="{ThemeResource rainspaceRedBrush}"/>
+            </StackPanel>
+        </Border>
+    </Grid>
+</UserControl>

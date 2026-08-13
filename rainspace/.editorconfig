@@ -1,0 +1,24 @@
+# Project-level nullable policy.
+# - Legacy directories carry their own per-directory .editorconfig baseline.
+# - New/migrated code under Features/ treats nullable warnings as errors.
+# - Root-level files that still carry migration warnings are listed explicitly below.
+
+root = true
+
+[MainWindow.xaml.cs]
+dotnet_diagnostic.CS8600.severity = none
+dotnet_diagnostic.CS8601.severity = none
+dotnet_diagnostic.CS8602.severity = none
+dotnet_diagnostic.CS8603.severity = none
+dotnet_diagnostic.CS8604.severity = none
+dotnet_diagnostic.CS8618.severity = none
+dotnet_diagnostic.CS8625.severity = none
+
+[App.xaml.cs]
+dotnet_diagnostic.CS8600.severity = none
+dotnet_diagnostic.CS8601.severity = none
+dotnet_diagnostic.CS8602.severity = none
+dotnet_diagnostic.CS8603.severity = none
+dotnet_diagnostic.CS8604.severity = none
+dotnet_diagnostic.CS8618.severity = none
+dotnet_diagnostic.CS8625.severity = none

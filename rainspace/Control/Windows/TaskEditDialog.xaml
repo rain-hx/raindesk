@@ -1,0 +1,304 @@
+<UserControl
+    x:Class="rainspace.Control.Windows.TaskEditDialog"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    mc:Ignorable="d"
+    HorizontalAlignment="Stretch"
+    VerticalAlignment="Stretch">
+
+    <UserControl.Resources>
+        <Style x:Key="TaskFieldTextBoxStyle" TargetType="TextBox" BasedOn="{StaticResource MyTextBoxStyle}">
+            <Setter Property="MinHeight" Value="44"/>
+            <Setter Property="Padding" Value="16,8"/>
+            <Setter Property="FontSize" Value="14"/>
+            <Setter Property="CornerRadius" Value="9"/>
+        </Style>
+        <Style x:Key="TaskFieldComboStyle" TargetType="ComboBox">
+            <Setter Property="MinHeight" Value="44"/>
+            <Setter Property="Padding" Value="12,5"/>
+            <Setter Property="FontSize" Value="14"/>
+            <Setter Property="CornerRadius" Value="9"/>
+            <Setter Property="BorderBrush" Value="#DDE5F0"/>
+            <Setter Property="Background" Value="#FBFDFF"/>
+        </Style>
+        <Style x:Key="TaskActionButtonStyle" TargetType="Button">
+            <Setter Property="Height" Value="36"/>
+            <Setter Property="MinHeight" Value="36"/>
+            <Setter Property="Padding" Value="14,0"/>
+            <Setter Property="CornerRadius" Value="8"/>
+            <Setter Property="FontSize" Value="13"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="HorizontalContentAlignment" Value="Center"/>
+            <Setter Property="VerticalContentAlignment" Value="Center"/>
+        </Style>
+    </UserControl.Resources>
+
+    <Grid Padding="14,6,14,0">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+        </Grid.RowDefinitions>
+
+        <Grid Grid.Row="0"
+              Margin="0,0,0,18">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="Auto"/>
+            </Grid.ColumnDefinitions>
+
+            <TextBlock x:Name="DialogTitleText"
+                       Grid.Column="0"
+                       Text="新建任务"
+                       FontSize="30"
+                       FontWeight="Bold"
+                       Foreground="#071A3D"
+                       VerticalAlignment="Center"/>
+
+            <ComboBox x:Name="PriorityCombo"
+                      Grid.Column="1"
+                      Style="{StaticResource TaskFieldComboStyle}"
+                      MinWidth="172"
+                      SelectedIndex="2"
+                      VerticalAlignment="Center">
+                <ComboBoxItem Tag="1">
+                    <StackPanel Orientation="Horizontal" Spacing="8">
+                        <FontIcon Glyph="&#xE7C1;" FontFamily="{StaticResource FluentIconFont}" FontSize="14" Foreground="#116DFF"/>
+                        <TextBlock Text="优先级：紧急" FontWeight="SemiBold"/>
+                    </StackPanel>
+                </ComboBoxItem>
+                <ComboBoxItem Tag="2">
+                    <StackPanel Orientation="Horizontal" Spacing="8">
+                        <FontIcon Glyph="&#xE7C1;" FontFamily="{StaticResource FluentIconFont}" FontSize="14" Foreground="#116DFF"/>
+                        <TextBlock Text="优先级：高" FontWeight="SemiBold"/>
+                    </StackPanel>
+                </ComboBoxItem>
+                <ComboBoxItem Tag="3">
+                    <StackPanel Orientation="Horizontal" Spacing="8">
+                        <FontIcon Glyph="&#xE7C1;" FontFamily="{StaticResource FluentIconFont}" FontSize="14" Foreground="#116DFF"/>
+                        <TextBlock Text="优先级：中" FontWeight="SemiBold"/>
+                    </StackPanel>
+                </ComboBoxItem>
+                <ComboBoxItem Tag="4">
+                    <StackPanel Orientation="Horizontal" Spacing="8">
+                        <FontIcon Glyph="&#xE7C1;" FontFamily="{StaticResource FluentIconFont}" FontSize="14" Foreground="#116DFF"/>
+                        <TextBlock Text="优先级：低" FontWeight="SemiBold"/>
+                    </StackPanel>
+                </ComboBoxItem>
+            </ComboBox>
+        </Grid>
+
+        <Border Grid.Row="1"
+                Background="#FBFFFFFF"
+                BorderBrush="#DDE7F4"
+                BorderThickness="1"
+                CornerRadius="10"
+                Padding="24,18,24,14"
+                HorizontalAlignment="Stretch"
+                VerticalAlignment="Stretch">
+            <Grid>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="*"/>
+                    <RowDefinition Height="Auto"/>
+                </Grid.RowDefinitions>
+
+                <ScrollViewer Grid.Row="0"
+                              VerticalScrollBarVisibility="Auto"
+                              HorizontalScrollBarVisibility="Disabled">
+                    <StackPanel Spacing="16">
+
+                <StackPanel Spacing="8">
+                    <TextBlock FontWeight="SemiBold" Foreground="#071A3D">
+                        <Run Text="标题"/>
+                        <Run Text=" *" Foreground="#EF1C12"/>
+                    </TextBlock>
+                    <TextBox x:Name="TitleBox"
+                             Style="{StaticResource TaskFieldTextBoxStyle}"
+                             PlaceholderText="输入任务标题..."
+                             MaxLength="200"/>
+                </StackPanel>
+
+                <StackPanel Spacing="8">
+                    <TextBlock Text="描述" FontWeight="SemiBold" Foreground="#071A3D"/>
+                    <TextBox x:Name="DescriptionBox"
+                             Style="{StaticResource TaskFieldTextBoxStyle}"
+                             PlaceholderText="输入任务详情..."
+                             TextWrapping="Wrap"
+                             TextAlignment="Justify"
+                             AcceptsReturn="True"
+                             Padding="18,10,22,10"
+                             MinHeight="116"
+                             MaxHeight="128"/>
+                </StackPanel>
+
+                <Grid ColumnSpacing="56">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="1.05*"/>
+                        <ColumnDefinition Width="*"/>
+                    </Grid.ColumnDefinitions>
+
+                    <StackPanel Grid.Column="0" Spacing="8">
+                        <TextBlock Text="截止日期" FontWeight="SemiBold"/>
+                        <Grid ColumnSpacing="10">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="1.2*"/>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="*"/>
+                            </Grid.ColumnDefinitions>
+                            <ComboBox x:Name="YearCombo"
+                                      Grid.Column="0"
+                                      Style="{StaticResource TaskFieldComboStyle}"
+                                      SelectionChanged="OnDateComboChanged"
+                                      HorizontalAlignment="Stretch"/>
+                            <ComboBox x:Name="MonthCombo"
+                                      Grid.Column="1"
+                                      Style="{StaticResource TaskFieldComboStyle}"
+                                      SelectionChanged="OnDateComboChanged"
+                                      HorizontalAlignment="Stretch"/>
+                            <ComboBox x:Name="DayCombo"
+                                      Grid.Column="2"
+                                      Style="{StaticResource TaskFieldComboStyle}"
+                                      SelectionChanged="OnDateComboChanged"
+                                      HorizontalAlignment="Stretch"/>
+                        </Grid>
+                    </StackPanel>
+
+                    <StackPanel Grid.Column="1" Spacing="8">
+                        <TextBlock Text="循环设置" FontWeight="SemiBold"/>
+                        <ComboBox x:Name="RecurringCombo"
+                                  Style="{StaticResource TaskFieldComboStyle}"
+                                  SelectionChanged="OnRecurringChanged"
+                                  HorizontalAlignment="Stretch">
+                            <ComboBoxItem Tag="None">
+                                <StackPanel Orientation="Horizontal" Spacing="8">
+                                    <FontIcon Glyph="&#xE895;" FontFamily="{StaticResource FluentIconFont}" FontSize="14" Foreground="#50617F"/>
+                                    <TextBlock Text="不重复"/>
+                                </StackPanel>
+                            </ComboBoxItem>
+                            <ComboBoxItem Content="每天" Tag="Daily"/>
+                            <ComboBoxItem Content="每周" Tag="Weekly"/>
+                            <ComboBoxItem Content="每月" Tag="Monthly"/>
+                            <ComboBoxItem Content="自定义 Cron" Tag="Custom"/>
+                        </ComboBox>
+                    </StackPanel>
+                </Grid>
+
+                <StackPanel Spacing="8">
+                    <TextBox x:Name="CronExpressionBox"
+                             Style="{StaticResource TaskFieldTextBoxStyle}"
+                             Header="Cron 表达式"
+                             PlaceholderText="如: 0 9 * * MON-FRI"
+                             Visibility="Collapsed"/>
+                    <TextBlock x:Name="CronValidationText"
+                               FontSize="12"
+                               Foreground="#E74C3C"
+                               Visibility="Collapsed"/>
+                </StackPanel>
+
+                <StackPanel Spacing="8">
+                    <TextBlock Text="子任务" FontWeight="SemiBold"/>
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="Auto"/>
+                        </Grid.ColumnDefinitions>
+                        <TextBox x:Name="SubtaskInput"
+                                 Grid.Column="0"
+                                 Style="{StaticResource TaskFieldTextBoxStyle}"
+                                 PlaceholderText="添加子任务..."/>
+                        <Button Grid.Column="1"
+                                Foreground="#0A7CFF"
+                                Background="Transparent"
+                                BorderThickness="0"
+                                Click="OnAddSubtask"
+                                Padding="16,0">
+                            <StackPanel Orientation="Horizontal" Spacing="8">
+                                <FontIcon Glyph="&#xE710;" FontFamily="{StaticResource FluentIconFont}" FontSize="14"/>
+                                <TextBlock Text="添加" FontWeight="SemiBold"/>
+                            </StackPanel>
+                        </Button>
+                    </Grid>
+                    <ItemsControl x:Name="SubtaskList">
+                        <ItemsControl.ItemContainerStyle>
+                            <Style TargetType="ContentPresenter">
+                                <Setter Property="Margin" Value="0,2"/>
+                            </Style>
+                        </ItemsControl.ItemContainerStyle>
+                    </ItemsControl>
+                </StackPanel>
+
+                <StackPanel Spacing="8"
+                            Visibility="Collapsed">
+                    <TextBlock Text="标签" FontWeight="SemiBold"/>
+                    <Grid ColumnSpacing="10">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="Auto"/>
+                        </Grid.ColumnDefinitions>
+                        <TextBox x:Name="TagInput"
+                                 Grid.Column="0"
+                                 Style="{StaticResource TaskFieldTextBoxStyle}"
+                                 PlaceholderText="输入标签..."
+                                 KeyDown="OnTagKeyDown"/>
+                        <Button Grid.Column="1"
+                                Content="添加"
+                                Click="OnAddTag"
+                                Padding="16,0"/>
+                    </Grid>
+                    <ItemsControl x:Name="TagList">
+                        <ItemsControl.ItemsPanel>
+                            <ItemsPanelTemplate>
+                                <StackPanel Orientation="Horizontal" Spacing="4"/>
+                            </ItemsPanelTemplate>
+                        </ItemsControl.ItemsPanel>
+                    </ItemsControl>
+                </StackPanel>
+
+                <StackPanel x:Name="CompletedAtRow"
+                            Spacing="4"
+                            Visibility="Collapsed">
+                    <TextBlock Text="完成时间" FontWeight="SemiBold"/>
+                    <TextBlock x:Name="CompletedAtText" Foreground="{ThemeResource SecondaryTextBrush}"/>
+                </StackPanel>
+                    </StackPanel>
+                </ScrollViewer>
+
+                <Grid Grid.Row="1"
+                      ColumnSpacing="16"
+                      Margin="0,12,0,0">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="84"/>
+                        <ColumnDefinition Width="116"/>
+                    </Grid.ColumnDefinitions>
+                    <Button Grid.Column="1"
+                            Content="取消"
+                            Style="{StaticResource TaskActionButtonStyle}"
+                            Background="#FAFCFF"
+                            BorderBrush="#E1E8F3"
+                            BorderThickness="1"
+                            Click="CancelButton_Click"/>
+                    <Button Grid.Column="2"
+                            Style="{StaticResource TaskActionButtonStyle}"
+                            Background="#0A7CFF"
+                            Foreground="White"
+                            BorderThickness="0"
+                            Click="SaveButton_Click">
+                        <StackPanel Orientation="Horizontal"
+                                    Spacing="7"
+                                    HorizontalAlignment="Center"
+                                    VerticalAlignment="Center">
+                            <FontIcon Glyph="&#xE73E;"
+                                      FontFamily="{StaticResource FluentIconFont}"
+                                      FontSize="13"/>
+                            <TextBlock Text="保存"
+                                       FontSize="13"
+                                       FontWeight="SemiBold"/>
+                        </StackPanel>
+                    </Button>
+                </Grid>
+            </Grid>
+        </Border>
+    </Grid>
+</UserControl>
