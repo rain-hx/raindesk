@@ -37,6 +37,7 @@ namespace raindesk.Control.UserControls.Config
             nameof(AppConfig.BlurEffect),
             nameof(AppConfig.BlurValue),
             nameof(AppConfig.HideSearchBox),
+            nameof(AppConfig.NoTextMode),
             nameof(AppConfig.AppThemeMode),
             nameof(AppConfig.GradientBGParam),
             nameof(AppConfig.CustomBGParams),
@@ -193,6 +194,13 @@ namespace raindesk.Control.UserControls.Config
             AutoSaveThemeSettings();
         }
 
+        private void NoTextMode_Toggled(object sender, RoutedEventArgs e)
+        {
+            if (!_isLoaded) return;
+
+            AutoSaveThemeSettings();
+        }
+
         private void ThemeMode_Changed(object sender, RoutedEventArgs e)
         {
             if (!_isLoaded || appConfig == null)
@@ -221,7 +229,12 @@ namespace raindesk.Control.UserControls.Config
         {
             if (!_isLoaded) return;
 
-            BGSettingUtil.BGSetting();
+            if (appConfig != null)
+            {
+                appConfig.BgOpacity = (int)e.NewValue;
+            }
+
+            MainWindow.mainWindow?.ApplyGlassBackdrop();
             AutoSaveThemeSettings();
         }
 

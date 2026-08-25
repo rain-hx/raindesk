@@ -195,7 +195,7 @@ namespace raindesk.Control.UserControls.Config
                     return;
                 }
 
-                string updateInfo = await System.Threading.Tasks.Task.Run(() => HttpUtil.Get(updateUrl));
+                string updateInfo = await HttpUtil.GetAsync(updateUrl);
                 if (StringUtil.IsEmpty(updateInfo))
                 {
                     await ShowInfoDialog("检查更新失败", "无法获取更新信息，请稍后再试。");

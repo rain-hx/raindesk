@@ -137,7 +137,7 @@
                         </Grid.ColumnDefinitions>
                         <TextBlock Text="背景透明度" VerticalAlignment="Center" FontSize="16"/>
                         <Slider Grid.Column="1"
-                                Value="{Binding BgOpacity}"
+                                Value="{Binding BgOpacity, Mode=TwoWay}"
                                 ValueChanged="BGOpacity_ValueChanged"
                                 Maximum="100"
                                 TickFrequency="1"
@@ -187,6 +187,24 @@
                         <ToggleSwitch Grid.Column="1"
                                       IsOn="{Binding HideSearchBox, Mode=TwoWay}"
                                       Toggled="HideSearchBox_Toggled"
+                                      OffContent=""
+                                      OnContent=""/>
+                    </Grid>
+                    <Border Height="1"
+                            Margin="18,0"
+                            Background="{ThemeResource DividerBrush}"/>
+                    <Grid MinHeight="64" Padding="18,0">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="Auto"/>
+                        </Grid.ColumnDefinitions>
+                        <StackPanel VerticalAlignment="Center" Spacing="4">
+                            <TextBlock Text="无字模式" FontSize="16" FontWeight="SemiBold"/>
+                            <TextBlock Text="隐藏所有图标下方的文字，只显示图标" Foreground="{ThemeResource SecondaryTextBrush}" FontSize="13"/>
+                        </StackPanel>
+                        <ToggleSwitch Grid.Column="1"
+                                      IsOn="{Binding NoTextMode, Mode=TwoWay}"
+                                      Toggled="NoTextMode_Toggled"
                                       OffContent=""
                                       OnContent=""/>
                     </Grid>

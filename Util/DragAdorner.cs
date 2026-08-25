@@ -33,14 +33,13 @@ namespace raindesk.Util
         private bool _isActive;
         private bool _isPlacementPreviewActive;
         private Storyboard? _placementStoryboard;
-        private const double DefaultFollowScale = 1.08d;
+        private const double DefaultFollowScale = 1.02d;
 
         public bool IsPlacementPreviewActive => _isPlacementPreviewActive;
 
-        private static readonly EasingFunctionBase PopEase = new BackEase
+        private static readonly EasingFunctionBase PopEase = new CubicEase
         {
-            EasingMode = EasingMode.EaseOut,
-            Amplitude = 0.25
+            EasingMode = EasingMode.EaseOut
         };
 
         private static readonly EasingFunctionBase MoveEase = new CubicEase
@@ -63,7 +62,7 @@ namespace raindesk.Util
             double elementHeight,
             double pointerOffsetX,
             double pointerOffsetY,
-            double initialScale = 1.08,
+            double initialScale = 1.02,
             int dragCount = 1)
         {
             if (_isActive) EndDrag(false);
@@ -87,7 +86,7 @@ namespace raindesk.Util
             Canvas overlayCanvas,
             double pointerOffsetX,
             double pointerOffsetY,
-            double initialScale = 1.08,
+            double initialScale = 1.02,
             int dragCount = 1,
             double? elementWidth = null,
             double? elementHeight = null)
@@ -145,7 +144,7 @@ namespace raindesk.Util
                 Width = width,
                 Height = height,
                 CornerRadius = new CornerRadius(18),
-                Background = new SolidColorBrush(global::Windows.UI.Color.FromArgb(255, 255, 255, 255))
+                Background = new SolidColorBrush(Colors.White)
             });
             host.Children.Add(new Border
             {
@@ -190,13 +189,13 @@ namespace raindesk.Util
                     VerticalAlignment = VerticalAlignment.Top,
                     Margin = new Thickness(0, -4, -4, 0),
                     CornerRadius = new CornerRadius(10),
-                    Background = new SolidColorBrush(global::Windows.UI.Color.FromArgb(255, 0, 103, 192)),
+                    Background = ThemeBrush("raindeskBlueBrush"),
                     Child = new TextBlock
                     {
                         Text = dragCount.ToString(),
                         FontSize = 11,
                         FontWeight = Microsoft.UI.Text.FontWeights.SemiBold,
-                        Foreground = new SolidColorBrush(Colors.White),
+                        Foreground = ThemeBrush("BadgeTextBrush"),
                         HorizontalAlignment = HorizontalAlignment.Center,
                         VerticalAlignment = VerticalAlignment.Center
                     }
@@ -232,7 +231,7 @@ namespace raindesk.Util
             _overlayCanvas.Children.Add(border);
             _isActive = true;
 
-            AnimateScale(_scaleTransform, 1.0, initialScale, TimeSpan.FromMilliseconds(180), PopEase);
+            AnimateScale(_scaleTransform, 1.0, initialScale, TimeSpan.FromMilliseconds(120), PopEase);
             return System.Threading.Tasks.Task.CompletedTask;
         }
 
@@ -271,7 +270,7 @@ namespace raindesk.Util
             if (Math.Abs(_scaleTransform.ScaleX - targetScale) > 0.01d
                 || Math.Abs(_scaleTransform.ScaleY - targetScale) > 0.01d)
             {
-                AnimateScale(_scaleTransform, _scaleTransform.ScaleX, targetScale, TimeSpan.FromMilliseconds(220), MoveEase);
+                AnimateScale(_scaleTransform, _scaleTransform.ScaleX, targetScale, TimeSpan.FromMilliseconds(180), MoveEase);
             }
         }
 
@@ -362,14 +361,14 @@ namespace raindesk.Util
                 {
                     From = _scaleTransform.ScaleX,
                     To = 1.0,
-                    Duration = TimeSpan.FromMilliseconds(hasTarget ? 220 : 160),
+                    Duration = TimeSpan.FromMilliseconds(hasTarget ? 180 : 160),
                     EasingFunction = MoveEase
                 };
                 var scaleY = new DoubleAnimation
                 {
                     From = _scaleTransform.ScaleY,
                     To = 1.0,
-                    Duration = TimeSpan.FromMilliseconds(hasTarget ? 220 : 160),
+                    Duration = TimeSpan.FromMilliseconds(hasTarget ? 180 : 160),
                     EasingFunction = MoveEase
                 };
                 Storyboard.SetTarget(scaleX, _scaleTransform);
@@ -490,6 +489,21 @@ namespace raindesk.Util
             _previewElement = null;
             _scaleTransform = null;
             _overlayCanvas = null;
+        }
+
+        /// <summary>
+        /// 从应用主题资源读取画刷，避免硬编码颜色无法响应主题/高对比度。
+        /// 返回空画刷作为兜底，保证拖拽预览不会因缺资源而崩溃。
+        /// </summary>
+        private static Brush ThemeBrush(string resourceKey)
+        {
+            if (Application.Current?.Resources?.TryGetValue(resourceKey, out object value) == true
+                && value is Brush brush)
+            {
+                return brush;
+            }
+
+            return new SolidColorBrush(Colors.Transparent);
         }
     }
 }

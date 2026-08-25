@@ -34,9 +34,18 @@ public sealed class LauncherShortcutListState
 
         var currentItems = new HashSet<IconInfo>(Items);
         int sharedCount = snapshot.Count(currentItems.Contains);
-        int smallerCount = Math.Min(Items.Count, snapshot.Count);
+        if (sharedCount == 0)
+        {
+            Items.ReplaceAll(snapshot);
+            return LauncherShortcutListUpdateKind.Reset;
+        }
 
-        if (sharedCount * 2 < smallerCount)
+        // 分组与“全部”之间切换时，通常只有一个小分组与整表重合。
+        // 此时逐项 Insert/Move 会产生大量 UI 通知，并让 SynchronizeWith
+        // 退化为平方级查找。差异超过一半时直接发送一次 Reset，交给
+        // 虚拟化面板仅实现当前可见的容器。
+        int largerCount = Math.Max(Items.Count, snapshot.Count);
+        if (sharedCount * 2 < largerCount)
         {
             Items.ReplaceAll(snapshot);
             return LauncherShortcutListUpdateKind.Reset;

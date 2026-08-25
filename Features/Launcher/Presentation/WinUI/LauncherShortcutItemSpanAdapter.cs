@@ -93,7 +93,7 @@ public static class LauncherShortcutItemSpanAdapter
         {
             return Math.Max(1, icon.DragPlaceholderColumnSpan_NoWrite);
         }
-        return icon.IsFolder ? Math.Max(1, icon.FolderColumnSpan_NoWrite) : 1;
+        return 1;
     }
 
     public static int GetRowSpan(IconInfo icon)
@@ -102,11 +102,11 @@ public static class LauncherShortcutItemSpanAdapter
         {
             return Math.Max(1, icon.DragPlaceholderRowSpan_NoWrite);
         }
-        return icon.IsFolder ? Math.Max(1, icon.FolderRowSpan_NoWrite) : 1;
+        return 1;
     }
 
     public static bool SupportsVariableSize(Panel? panel) =>
-        panel is LauncherGridPanel or VariableSizedWrapGrid or ItemsWrapGrid;
+        panel is LauncherGridPanel or VariableSizedWrapGrid;
 
     private static void ClearContainerSizeAndSpans(ListViewItem item)
     {

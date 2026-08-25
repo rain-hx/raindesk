@@ -65,7 +65,22 @@ internal sealed class WorkspaceGroupEditVisualController
         WorkspaceGroupTabSizingAdapter.ApplyEditWidth(container, widthMetrics);
         if (BlinkingCaretOverlay.TryFindHostElements(editor, out TextBlock mirror, out Border blinker))
         {
-            BlinkingCaretOverlay.Attach(editor, mirror, blinker, dispatcherQueue);
+            BlinkingCaretOverlay.Attach(
+                editor,
+                mirror,
+                blinker,
+                dispatcherQueue,
+                maxVisibleTextElements: 5,
+                visibleTextWidthChanged: textWidth =>
+                {
+                    double editorWidth = Math.Clamp(Math.Ceiling(textWidth + 18d), 48d, 96d);
+                    editor.Width = editorWidth;
+                    if (editor.Parent is FrameworkElement editorHost)
+                    {
+                        editorHost.Width = editorWidth;
+                    }
+                    container.Width = editorWidth;
+                });
             BlinkingCaretOverlay.PrepareEditAppearance(editor);
         }
 

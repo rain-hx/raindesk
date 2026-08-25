@@ -109,13 +109,15 @@ namespace raindesk.Util
         /// </summary>
         private static Border CreateToast(string message, ToastType type)
         {
-            var (icon, background, foreground) = GetTypeStyle(type);
+            var (icon, backgroundKey) = GetTypeStyle(type);
+            Brush background = ThemeBrush(backgroundKey);
+            Brush foreground = new SolidColorBrush(Colors.White);
 
             var iconBlock = new FontIcon
             {
                 Glyph = icon,
                 FontSize = 18,
-                Foreground = new SolidColorBrush(Colors.White),
+                Foreground = foreground,
                 VerticalAlignment = VerticalAlignment.Center
             };
 
@@ -123,7 +125,7 @@ namespace raindesk.Util
             {
                 Text = message,
                 FontSize = 14,
-                Foreground = new SolidColorBrush(Colors.White),
+                Foreground = foreground,
                 VerticalAlignment = VerticalAlignment.Center,
                 TextWrapping = TextWrapping.Wrap,
                 MaxWidth = 300
@@ -140,7 +142,7 @@ namespace raindesk.Util
 
             var toast = new Border
             {
-                Background = new SolidColorBrush(ParseColor(background)),
+                Background = background,
                 CornerRadius = new CornerRadius(8),
                 Child = stackPanel,
                 HorizontalAlignment = HorizontalAlignment.Right,
@@ -151,37 +153,32 @@ namespace raindesk.Util
         }
 
         /// <summary>
-        /// 获取类型样式
+        /// 获取类型样式：图标与主题资源键。语义色统一从应用主题读取，响应明暗/高对比度。
         /// </summary>
-        private static (string icon, string background, string foreground) GetTypeStyle(ToastType type)
+        private static (string icon, string backgroundKey) GetTypeStyle(ToastType type)
         {
             return type switch
             {
-                ToastType.Success => ("✓", "#10C875", "#FFFFFF"),
-                ToastType.Error => ("✕", "#EF4444", "#FFFFFF"),
-                ToastType.Warning => ("⚠", "#F59E0B", "#FFFFFF"),
-                ToastType.Info => ("ℹ", "#087BFF", "#FFFFFF"),
-                _ => ("ℹ", "#087BFF", "#FFFFFF")
+                ToastType.Success => ("✓", "raindeskGreenBrush"),
+                ToastType.Error => ("✕", "raindeskRedBrush"),
+                ToastType.Warning => ("⚠", "raindeskAmberBrush"),
+                ToastType.Info => ("ℹ", "raindeskBlueBrush"),
+                _ => ("ℹ", "raindeskBlueBrush")
             };
         }
 
         /// <summary>
-        /// 解析颜色字符串
+        /// 从应用主题资源读取画刷，缺失时回退为透明。
         /// </summary>
-        private static Windows.UI.Color ParseColor(string colorStr)
+        private static Brush ThemeBrush(string resourceKey)
         {
-            if (colorStr.StartsWith("#"))
+            if (Application.Current?.Resources?.TryGetValue(resourceKey, out object value) == true
+                && value is Brush brush)
             {
-                var hex = colorStr.Substring(1);
-                if (hex.Length == 6)
-                {
-                    byte r = Convert.ToByte(hex.Substring(0, 2), 16);
-                    byte g = Convert.ToByte(hex.Substring(2, 2), 16);
-                    byte b = Convert.ToByte(hex.Substring(4, 2), 16);
-                    return Windows.UI.Color.FromArgb(255, r, g, b);
-                }
+                return brush;
             }
-            return Colors.Black;
+
+            return new SolidColorBrush(Colors.Transparent);
         }
 
         /// <summary>

@@ -12,7 +12,10 @@ internal static class WorkspaceGroupTabSizingAdapter
         WorkspaceGroupTabWidthMetrics metrics)
     {
         ArgumentNullException.ThrowIfNull(item);
-        item.Height = WorkspaceGroupTabWidthCalculator.CalculateEdit(metrics);
+        if (double.IsNaN(item.Width))
+        {
+            item.Width = WorkspaceGroupTabWidthCalculator.CalculateEdit(metrics);
+        }
         item.Margin = new Thickness(0d, 0d, 0d, metrics.RightMargin);
     }
 
@@ -34,7 +37,7 @@ internal static class WorkspaceGroupTabSizingAdapter
         }
 
         label.Measure(new Size(double.PositiveInfinity, double.PositiveInfinity));
-        item.Height = WorkspaceGroupTabWidthCalculator.CalculateNatural(
+        item.Width = WorkspaceGroupTabWidthCalculator.CalculateNatural(
             label.DesiredSize.Width,
             metrics);
         item.Margin = new Thickness(0d, 0d, 0d, metrics.RightMargin);

@@ -347,7 +347,7 @@ namespace raindesk.ViewModel
         }
 
         private int GetFolderPreviewLimit()
-            => FolderSize == ShortcutFolderSize.Large ? 6 : 4;
+            => 2;
 
         [JsonIgnore]
         public int FolderColumnSpan_NoWrite => FolderSize == ShortcutFolderSize.Small ? 1 : 2;
@@ -543,11 +543,25 @@ namespace raindesk.ViewModel
                                 imageByteArr = bytes;
                         }
                     }
-                    catch { }
+                    catch (Exception ex)
+                    {
+                        raindesk.Util.LogUtil.WriteErrorLog(ex, $"BitmapImage setter 提取图标字节失败: {path}");
+                    }
                 }
                 OnPropertyChanged("BitmapImage");
             }
         }
+
+        /// <summary>是否已缓存解码结果（不触发同步解码，供后台加载器快速判断）。</summary>
+        [JsonIgnore]
+        public bool HasCachedBitmap_NoWrite => bitmapImage != null;
+
+        /// <summary>
+        /// 仅返回已解码缓存，绝不触发同步解码。绑定瓦片 Image 时使用，
+        /// 解码由后台加载器分批完成，避免“全部图标”模式一次性同步解码大量图标。
+        /// </summary>
+        [JsonIgnore]
+        public BitmapImage? BitmapImageCached_NoWrite => bitmapImage;
 
         [JsonIgnore]
         public BitmapImage? BitmapImage_NoWrite
@@ -577,7 +591,10 @@ namespace raindesk.ViewModel
                                 imageByteArr = bytes;
                         }
                     }
-                    catch { }
+                    catch (Exception ex)
+                    {
+                        raindesk.Util.LogUtil.WriteErrorLog(ex, $"BitmapImage_NoWrite setter 提取图标字节失败: {path}");
+                    }
                 }
                 OnPropertyChanged("BitmapImage_NoWrite");
             }
@@ -591,6 +608,7 @@ namespace raindesk.ViewModel
             bitmapImage = bi;
             OnPropertyChanged(nameof(BitmapImage));
             OnPropertyChanged(nameof(BitmapImage_NoWrite));
+            OnPropertyChanged(nameof(BitmapImageCached_NoWrite));
         }
 
 

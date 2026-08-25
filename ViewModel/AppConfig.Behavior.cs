@@ -9,7 +9,7 @@ public partial class AppConfig
 {
     // ── 面板行为 ──────────────────────────────────────────────────
 
-    private bool followMouse = true;
+    private bool followMouse;
     private AppHideType appHideType = AppHideType.START_EXE;
     private bool startedShowPanel = true;
     private bool showBarIcon = true;
@@ -66,11 +66,20 @@ public partial class AppConfig
         set => SetProperty(ref hideSearchBox, value);
     }
 
+    // ── 顶部栏折叠（默认隐藏标题/图标/搜索框，只留展开按钮） ─────────
+
+    private bool topBarCollapsed = true;
+
+    public bool TopBarCollapsed
+    {
+        get => topBarCollapsed;
+        set => SetProperty(ref topBarCollapsed, value);
+    }
+
     // ── 系统集成 ──────────────────────────────────────────────────
 
     private bool selfStartUp = true;
     private bool selfStartUped;
-    private bool pmModel;
     private UpdateType updateType = UpdateType.Gitee;
 
     public bool SelfStartUp
@@ -88,12 +97,6 @@ public partial class AppConfig
     {
         get => selfStartUped;
         set => SetProperty(ref selfStartUped, value);
-    }
-
-    public bool PMModel
-    {
-        get => pmModel;
-        set => SetProperty(ref pmModel, value);
     }
 
     public UpdateType UpdateType
@@ -172,6 +175,39 @@ public partial class AppConfig
     public bool? ShowIconTitle
     {
         get => showIconTitle;
-        set => SetProperty(ref showIconTitle, value);
+        set
+        {
+            if (SetProperty(ref showIconTitle, value))
+            {
+                OnPropertyChanged(nameof(ShowShortcutTitle));
+            }
+        }
     }
+
+    // ── 无字模式（隐藏所有图标下的文字，只显示图标） ──────────────
+
+    private bool noTextMode;
+
+    public bool NoTextMode
+    {
+        get => noTextMode;
+        set
+        {
+            if (SetProperty(ref noTextMode, value))
+            {
+                OnPropertyChanged(nameof(ShowShortcutTitle));
+                OnPropertyChanged(nameof(ShowFolderTitle));
+            }
+        }
+    }
+
+    /// <summary>
+    /// 快捷方式图标标题是否可见：受“显示图标标题”与“无字模式”共同控制。
+    /// </summary>
+    public bool ShowShortcutTitle => (showIconTitle ?? true) && !noTextMode;
+
+    /// <summary>
+    /// 文件夹图标名称是否可见：仅受“无字模式”控制，文件夹名不会被“显示图标标题”隐藏。
+    /// </summary>
+    public bool ShowFolderTitle => !noTextMode;
 }

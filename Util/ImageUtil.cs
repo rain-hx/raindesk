@@ -138,7 +138,10 @@ namespace raindesk.Util
                     return Base64ToBitmapImage(Constants.DEFAULT_DIR_IMAGE_BASE64);
                 }
             }
-            catch { }
+            catch (Exception ex)
+            {
+                LogUtil.WriteErrorLog(ex, "GetBitmapIconByPath 失败: " + filePath);
+            }
 
             return null;
         }
@@ -168,7 +171,10 @@ namespace raindesk.Util
                     return Convert.FromBase64String(Constants.DEFAULT_DIR_IMAGE_BASE64);
                 }
             }
-            catch { }
+            catch (Exception ex)
+            {
+                LogUtil.WriteErrorLog(ex, "GetImageBytesByPath 失败: " + filePath);
+            }
 
             return null;
         }
@@ -198,7 +204,10 @@ namespace raindesk.Util
                         path = targetPath;
                     }
                 }
-                catch { }
+                catch (Exception ex)
+                {
+                    LogUtil.WriteErrorLog(ex, "解析快捷方式图标失败: " + path);
+                }
             }
 
             if (string.IsNullOrEmpty(iconPath))
@@ -245,7 +254,10 @@ namespace raindesk.Util
                     return targetPath;
                 }
             }
-            catch { }
+            catch (Exception ex)
+            {
+                LogUtil.WriteErrorLog(ex, "解析快捷方式图标路径失败: " + filePath);
+            }
 
             return filePath;
         }
@@ -378,7 +390,10 @@ namespace raindesk.Util
                     return ByteArrToImage(iconBytes);
                 }
             }
-            catch { }
+            catch (Exception ex)
+            {
+                LogUtil.WriteErrorLog(ex, "提取文件图标失败: " + filePath);
+            }
 
             // 最后回退：尝试用 UriSource 加载
             try
@@ -390,7 +405,10 @@ namespace raindesk.Util
                     return bi;
                 }
             }
-            catch { }
+            catch (Exception ex)
+            {
+                LogUtil.WriteErrorLog(ex, "UriSource 加载图标失败: " + filePath);
+            }
 
             return null;
         }
@@ -553,7 +571,10 @@ namespace raindesk.Util
                 if (bi != null)
                     icon.SetBitmapImageDirect(bi);
             }
-            catch { }
+            catch (Exception ex)
+            {
+                LogUtil.WriteErrorLog(ex, "EnsureIconBitmap 失败");
+            }
         }
 
         /// <summary>

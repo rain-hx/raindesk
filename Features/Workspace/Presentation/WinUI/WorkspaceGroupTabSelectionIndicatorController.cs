@@ -1,6 +1,7 @@
 using Microsoft.UI.Dispatching;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
+using Microsoft.UI.Xaml.Media;
 using Microsoft.UI.Xaml.Media.Animation;
 using raindesk.Controls;
 using raindesk.Features.Workspace.Presentation;
@@ -18,6 +19,7 @@ internal sealed class WorkspaceGroupTabSelectionIndicatorController
     private int _pendingSelectionIndex = -1;
     private bool _pendingAnimate;
     private Storyboard? _storyboard;
+    private long _generation;
     private double _currentY;
     private double _currentHeight;
 
@@ -127,10 +129,9 @@ internal sealed class WorkspaceGroupTabSelectionIndicatorController
             return;
         }
 
-        double canvasTop = Canvas.GetTop(indicator);
         double startY = _currentHeight > 0d
             ? _currentY
-            : double.IsNaN(canvasTop) ? _currentY : canvasTop;
+            : double.IsNaN(Canvas.GetTop(indicator)) ? _currentY : Canvas.GetTop(indicator);
         double startHeight = _currentHeight > 0d ? _currentHeight : indicator.Height;
         if (startHeight <= 0d)
         {
@@ -295,35 +296,51 @@ internal sealed class WorkspaceGroupTabSelectionIndicatorController
         TimeSpan duration)
     {
         StopStoryboard();
-        Canvas.SetTop(indicator, fromY);
-        indicator.Height = fromHeight;
+
+        // 一次性提交最终布局值，之后只动画 RenderTransform，避免逐帧强制布局。
+        ApplyLayout(indicator, toY, toHeight);
+        if (toHeight <= 0d)
+        {
+            return;
+        }
+
+        indicator.RenderTransformOrigin = new Windows.Foundation.Point(0.5d, 0.5d);
+        var transform = indicator.RenderTransform as CompositeTransform ?? new CompositeTransform();
+        indicator.RenderTransform = transform;
+
+        double scale = fromHeight / toHeight;
+        double translateY = fromY - toY - ((1d - scale) * toHeight / 2d);
+        transform.ScaleY = scale;
+        transform.TranslateY = translateY;
 
         EasingFunctionBase easing = MotionTokens.EaseOut();
         var moveY = new DoubleAnimation
         {
-            From = fromY,
-            To = toY,
+            To = 0d,
             Duration = duration,
             EasingFunction = easing
         };
-        Storyboard.SetTarget(moveY, indicator);
-        Storyboard.SetTargetProperty(moveY, "(Canvas.Top)");
+        Storyboard.SetTarget(moveY, transform);
+        Storyboard.SetTargetProperty(moveY, nameof(CompositeTransform.TranslateY));
 
-        var resizeHeight = new DoubleAnimation
+        var resizeScale = new DoubleAnimation
         {
-            From = fromHeight,
-            To = toHeight,
+            To = 1d,
             Duration = duration,
             EasingFunction = easing
         };
-        Storyboard.SetTarget(resizeHeight, indicator);
-        Storyboard.SetTargetProperty(resizeHeight, "Height");
+        Storyboard.SetTarget(resizeScale, transform);
+        Storyboard.SetTargetProperty(resizeScale, nameof(CompositeTransform.ScaleY));
 
+        long generation = ++_generation;
         _storyboard = new Storyboard { FillBehavior = FillBehavior.HoldEnd };
         _storyboard.Children.Add(moveY);
-        _storyboard.Children.Add(resizeHeight);
+        _storyboard.Children.Add(resizeScale);
         _storyboard.Completed += (_, _) =>
         {
+            if (generation != _generation) return;
+            transform.TranslateY = 0d;
+            transform.ScaleY = 1d;
             ApplyLayout(indicator, toY, toHeight);
         };
         _storyboard.Begin();
@@ -333,5 +350,6 @@ internal sealed class WorkspaceGroupTabSelectionIndicatorController
     {
         _storyboard?.Stop();
         _storyboard = null;
+        _generation++;
     }
 }

@@ -116,20 +116,6 @@ public static class AppServices
                     PluginContributionKind.SearchProvider,
                     "Everything 搜索")
             })));
-        services.AddSingleton<IBuiltInPlugin>(new StaticBuiltInPlugin(new PluginManifest(
-            PluginManagementSettingsContribution.PluginId,
-            "Plugin Management",
-            "1.0.0",
-            PluginApi.CurrentVersion,
-            IsBuiltIn: true,
-            new[] { PluginCapability.Settings },
-            new[]
-            {
-                new PluginContributionDescriptor(
-                    PluginManagementSettingsContribution.ContributionId,
-                    PluginContributionKind.SettingsSection,
-                    "插件管理设置")
-            })));
         services.AddSingleton<IPluginManifestValidator>(_ => new PluginManifestValidator());
         services.AddSingleton<PluginCatalog>();
         services.AddSingleton<IPluginCatalog>(sp => sp.GetRequiredService<PluginCatalog>());
@@ -154,21 +140,8 @@ public static class AppServices
 
         // ── Settings 模块 ────────────────────────────────────────
         services.AddSingleton<ISettingsSectionProvider, BuiltInSettingsSectionProvider>();
-        services.AddSingleton<ISettingsSectionProvider>(sp =>
-            new PluginGatedSettingsSectionProvider(
-                sp.GetRequiredService<IPluginContributionGate>(),
-                PluginManagementSettingsContribution.PluginId,
-                PluginManagementSettingsContribution.ContributionId,
-                new PluginManagementSettingsSectionProvider()));
         services.AddSingleton<ISettingsSectionCatalog, SettingsSectionCatalog>();
         services.AddSingleton<ISettingsPageFactory, BuiltInSettingsPageFactory>();
-        services.AddSingleton<ISettingsPageFactory>(sp =>
-            new PluginGatedSettingsPageFactory(
-                sp.GetRequiredService<IPluginContributionGate>(),
-                PluginManagementSettingsContribution.PluginId,
-                PluginManagementSettingsContribution.ContributionId,
-                new PluginManagementSettingsPageFactory(
-                    sp.GetRequiredService<IPluginCatalog>())));
         services.AddSingleton<SettingsPageResolver>();
 
         // ── Workspace / Launcher 模块 ────────────────────────────

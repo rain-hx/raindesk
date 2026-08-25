@@ -32,9 +32,6 @@
                                             <ObjectAnimationUsingKeyFrames Storyboard.TargetName="ContentHost" Storyboard.TargetProperty="Foreground">
                                                 <DiscreteObjectKeyFrame KeyTime="0" Value="{ThemeResource raindeskBlueBrush}"/>
                                             </ObjectAnimationUsingKeyFrames>
-                                            <ObjectAnimationUsingKeyFrames Storyboard.TargetName="Indicator" Storyboard.TargetProperty="Background">
-                                                <DiscreteObjectKeyFrame KeyTime="0" Value="{ThemeResource raindeskBlueBrush}"/>
-                                            </ObjectAnimationUsingKeyFrames>
                                         </Storyboard>
                                     </VisualState>
                                     <VisualState x:Name="Indeterminate"/>
@@ -67,13 +64,6 @@
                                               HorizontalAlignment="Center"
                                               VerticalAlignment="Center"
                                               Margin="{TemplateBinding Padding}"/>
-                            <Border x:Name="Indicator"
-                                    Height="3"
-                                    Width="42"
-                                    CornerRadius="2"
-                                    Background="Transparent"
-                                    HorizontalAlignment="Center"
-                                    VerticalAlignment="Bottom"/>
                         </Grid>
                     </ControlTemplate>
                 </Setter.Value>
@@ -122,29 +112,47 @@
                                   HorizontalScrollBarVisibility="Hidden"
                                   VerticalScrollMode="Disabled"
                                   VerticalScrollBarVisibility="Disabled">
-                        <StackPanel Orientation="Horizontal"
-                                    Spacing="28"
-                                    VerticalAlignment="Center"
-                                    AutomationProperties.Name="待办选项卡">
-                            <RadioButton x:Name="ActiveTab"
-                                         Content="待办"
-                                         Tag="Active"
-                                         GroupName="TodoTabs"
-                                         Checked="TodoTab_Checked"
-                                         IsChecked="True"
-                                         Style="{StaticResource TodoTabButtonStyle}"/>
-                            <RadioButton Content="已完成"
-                                         x:Name="CompletedTab"
-                                         Tag="Completed"
-                                         GroupName="TodoTabs"
-                                         Checked="TodoTab_Checked"
-                                         Style="{StaticResource TodoTabButtonStyle}"/>
-                            <RadioButton Content="全部"
-                                         Tag="All"
-                                         GroupName="TodoTabs"
-                                         Checked="TodoTab_Checked"
-                                         Style="{StaticResource TodoTabButtonStyle}"/>
-                        </StackPanel>
+                        <Grid>
+                            <StackPanel x:Name="TodoTabsPanel"
+                                        Orientation="Horizontal"
+                                        Spacing="28"
+                                        VerticalAlignment="Center"
+                                        AutomationProperties.Name="待办选项卡">
+                                <RadioButton x:Name="ActiveTab"
+                                             Content="待办"
+                                             Tag="Active"
+                                             GroupName="TodoTabs"
+                                             Checked="TodoTab_Checked"
+                                             IsChecked="True"
+                                             Style="{StaticResource TodoTabButtonStyle}"/>
+                                <RadioButton Content="已完成"
+                                             x:Name="CompletedTab"
+                                             Tag="Completed"
+                                             GroupName="TodoTabs"
+                                             Checked="TodoTab_Checked"
+                                             Style="{StaticResource TodoTabButtonStyle}"/>
+                                <RadioButton Content="全部"
+                                             x:Name="AllTab"
+                                             Tag="All"
+                                             GroupName="TodoTabs"
+                                             Checked="TodoTab_Checked"
+                                             Style="{StaticResource TodoTabButtonStyle}"/>
+                            </StackPanel>
+                            <Border x:Name="SharedTabIndicator"
+                                    Width="42"
+                                    Height="3"
+                                    CornerRadius="2"
+                                    HorizontalAlignment="Left"
+                                    VerticalAlignment="Bottom"
+                                    RenderTransformOrigin="0.5,0.5"
+                                    Background="{ThemeResource raindeskBlueBrush}"
+                                    IsHitTestVisible="False"
+                                    Visibility="Collapsed">
+                                <Border.RenderTransform>
+                                    <CompositeTransform x:Name="SharedTabIndicatorTransform"/>
+                                </Border.RenderTransform>
+                            </Border>
+                        </Grid>
                     </ScrollViewer>
 
                     <Button Grid.Column="1"

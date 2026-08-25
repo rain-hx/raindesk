@@ -270,6 +270,14 @@ namespace raindesk.Util
         /// </summary>
         public static IconInfo GetIconInfoByPath(string path)
         {
+            return GetIconInfoByPathCore(path, resolveLnkSynchronously: true);
+        }
+
+        /// <summary>
+        /// 异步版本：在后台解析 .lnk，避免 UI 线程的 3 秒同步等待。
+        /// </summary>
+        public static async global::System.Threading.Tasks.Task<IconInfo> GetIconInfoByPathAsync(string path)
+        {
             string tempPath = path;
             string iconPath = path;
             string startArg = null;
@@ -283,9 +291,53 @@ namespace raindesk.Util
                 {
                     try
                     {
-                        string targetPath = FileUtil.GetTargetPathByLnk(path);
-                        iconPath = FileUtil.GetIconPathByLnk(path) ?? path;
-                        startArg = FileUtil.GetArgByLnk(path);
+                        string targetPath = await FileUtil.GetTargetPathByLnkAsync(path);
+                        iconPath = (await FileUtil.GetIconPathByLnkAsync(path)) ?? path;
+                        startArg = await FileUtil.GetArgByLnkAsync(path);
+                        if (targetPath != null) tempPath = targetPath;
+                    }
+                    catch (Exception ex) { LogUtil.WriteErrorLog(ex, "解析快捷方式失败: " + path); }
+                }
+
+                return await BuildIconInfoAsync(path, tempPath, iconPath, startArg, ext);
+            }
+            catch (Exception ex)
+            {
+                LogUtil.WriteErrorLog(ex, "GetIconInfoByPathAsync 失败: " + path);
+                return new IconInfo
+                {
+                    Path = path,
+                    Name = System.IO.Path.GetFileNameWithoutExtension(path),
+                    ImageByteArr_NoWrite = Convert.FromBase64String(Constants.DEFAULT_IMG_IMAGE_BASE64),
+                    DefaultImage_NoWrite = Convert.FromBase64String(Constants.DEFAULT_IMG_IMAGE_BASE64)
+                };
+            }
+        }
+
+        private static IconInfo GetIconInfoByPathCore(string path, bool resolveLnkSynchronously)
+        {
+            string tempPath = path;
+            string iconPath = path;
+            string startArg = null;
+
+            try
+            {
+                string ext = System.IO.Path.GetExtension(path)?.ToLower() ?? "";
+
+                // 快捷方式：解析目标路径和图标路径
+                if (".lnk".Equals(ext))
+                {
+                    try
+                    {
+                        string targetPath = resolveLnkSynchronously
+                            ? FileUtil.GetTargetPathByLnk(path)
+                            : null;
+                        iconPath = resolveLnkSynchronously
+                            ? (FileUtil.GetIconPathByLnk(path) ?? path)
+                            : path;
+                        startArg = resolveLnkSynchronously
+                            ? FileUtil.GetArgByLnk(path)
+                            : null;
                         if (targetPath != null) tempPath = targetPath;
                     }
                     catch (Exception ex) { LogUtil.WriteErrorLog(ex, "解析快捷方式失败: " + path); }
@@ -343,6 +395,51 @@ namespace raindesk.Util
                     DefaultImage_NoWrite = Convert.FromBase64String(Constants.DEFAULT_IMG_IMAGE_BASE64)
                 };
             }
+        }
+
+        private static async global::System.Threading.Tasks.Task<IconInfo> BuildIconInfoAsync(
+            string path,
+            string tempPath,
+            string iconPath,
+            string startArg,
+            string ext)
+        {
+            byte[] imageBytes = await global::System.Threading.Tasks.Task.Run(
+                () => ImageUtil.GetImageBytesByPath(iconPath)).ConfigureAwait(true);
+            if (imageBytes == null || imageBytes.Length == 0)
+            {
+                imageBytes = Convert.FromBase64String(Constants.DEFAULT_IMG_IMAGE_BASE64);
+            }
+
+            Microsoft.UI.Xaml.Media.Imaging.BitmapImage bi = ImageUtil.ByteArrToImage(imageBytes);
+            if (bi == null)
+            {
+                try
+                {
+                    bi = ImageUtil.GetBitmapIconByPath(iconPath);
+                }
+                catch (Exception ex) { LogUtil.WriteErrorLog(ex, "获取图标失败: " + iconPath); }
+            }
+
+            var iconInfo = new IconInfo
+            {
+                Path = tempPath,
+                Name = System.IO.Path.GetFileNameWithoutExtension(path),
+                LnkPath = (".lnk".Equals(ext)) ? path : null,
+                StartArg = startArg,
+            };
+
+            if (imageBytes != null && imageBytes.Length > 0)
+            {
+                iconInfo.ImageByteArr_NoWrite = imageBytes;
+                iconInfo.DefaultImage_NoWrite = imageBytes;
+            }
+            if (bi != null)
+            {
+                iconInfo.SetBitmapImageDirect(bi);
+            }
+
+            return iconInfo;
         }
 
         /// <summary>

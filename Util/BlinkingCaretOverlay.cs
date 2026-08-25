@@ -1,5 +1,6 @@
 using System;
 using System.Linq;
+using System.Globalization;
 using System.Runtime.CompilerServices;
 using Microsoft.UI.Dispatching;
 using Microsoft.UI.Xaml;
@@ -24,6 +25,8 @@ public sealed class BlinkingCaretOverlay
     private readonly double _fontSize;
     private readonly FontWeight _fontWeight;
     private readonly bool _centerAlign;
+    private readonly int _maxVisibleTextElements;
+    private readonly Action<double>? _visibleTextWidthChanged;
     private DispatcherQueueTimer? _timer;
     private bool _blinkOn = true;
     private bool _hidTextBoxOpacity;
@@ -36,7 +39,9 @@ public sealed class BlinkingCaretOverlay
         DispatcherQueue dispatcher,
         double fontSize,
         FontWeight fontWeight,
-        bool centerAlign)
+        bool centerAlign,
+        int maxVisibleTextElements,
+        Action<double>? visibleTextWidthChanged)
     {
         _textBox = textBox;
         _mirror = mirror;
@@ -45,6 +50,8 @@ public sealed class BlinkingCaretOverlay
         _fontSize = fontSize;
         _fontWeight = fontWeight;
         _centerAlign = centerAlign;
+        _maxVisibleTextElements = Math.Max(0, maxVisibleTextElements);
+        _visibleTextWidthChanged = visibleTextWidthChanged;
 
         _textBox.GotFocus += OnGotFocus;
         _textBox.LostFocus += OnLostFocus;
@@ -61,7 +68,9 @@ public sealed class BlinkingCaretOverlay
         DispatcherQueue dispatcher,
         double fontSize = 14,
         bool centerAlign = true,
-        FontWeight? fontWeight = null)
+        FontWeight? fontWeight = null,
+        int maxVisibleTextElements = 0,
+        Action<double>? visibleTextWidthChanged = null)
     {
         if (Instances.TryGetValue(textBox, out _))
         {
@@ -75,7 +84,9 @@ public sealed class BlinkingCaretOverlay
             dispatcher,
             fontSize,
             fontWeight ?? Microsoft.UI.Text.FontWeights.SemiBold,
-            centerAlign);
+            centerAlign,
+            maxVisibleTextElements,
+            visibleTextWidthChanged);
         Instances.Add(textBox, overlay);
 
         if (textBox.FocusState != FocusState.Unfocused)
@@ -204,7 +215,8 @@ public sealed class BlinkingCaretOverlay
             _hidTextBoxOpacity = true;
         }
 
-        _mirror.Text = _textBox.Text ?? string.Empty;
+        _mirror.Text = GetVisibleText(_textBox.Text ?? string.Empty);
+        _visibleTextWidthChanged?.Invoke(MeasureTextWidth(_mirror.Text));
         if (_mirror.Visibility != Visibility.Visible)
         {
             _mirror.Visibility = Visibility.Visible;
@@ -227,15 +239,28 @@ public sealed class BlinkingCaretOverlay
 
         string text = _textBox.Text ?? string.Empty;
         int selectionStart = Math.Clamp(_textBox.SelectionStart, 0, text.Length);
-        string textBeforeCaret = text[..selectionStart];
+        string textBeforeCaret = GetVisibleText(text[..selectionStart]);
         double textBeforeWidth = MeasureTextWidth(textBeforeCaret);
-        double fullTextWidth = MeasureTextWidth(text);
+        double fullTextWidth = MeasureTextWidth(GetVisibleText(text));
         double caretX = _centerAlign
             ? (hostWidth - fullTextWidth) / 2d + textBeforeWidth
             : textBeforeWidth + GetHorizontalPadding();
 
         double marginLeft = Math.Max(0d, caretX);
         _blinker.Margin = new Thickness(marginLeft, 0, 0, 0);
+    }
+
+    private string GetVisibleText(string text)
+    {
+        if (_maxVisibleTextElements <= 0)
+        {
+            return text;
+        }
+
+        StringInfo info = new(text);
+        return info.LengthInTextElements <= _maxVisibleTextElements
+            ? text
+            : info.SubstringByTextElements(0, _maxVisibleTextElements);
     }
 
     private double GetHorizontalPadding()

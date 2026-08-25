@@ -38,8 +38,9 @@ public sealed class LauncherExternalImportService : ILauncherExternalImportServi
             LauncherShortcutDraftResolution resolution;
             try
             {
-                resolution = await _draftSource.ResolveAsync(path, cancellationToken)
-                    .ConfigureAwait(false);
+                // 不使用 ConfigureAwait(false)：AddMany 写入数据后必须让 CollectionChanged
+                // 与 UI 重建在调用线程（UI 线程）执行，否则新图标不会立即渲染。
+                resolution = await _draftSource.ResolveAsync(path, cancellationToken);
             }
             catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
             {

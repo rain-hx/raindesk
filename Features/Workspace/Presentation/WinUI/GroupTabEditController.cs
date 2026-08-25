@@ -43,6 +43,7 @@ internal sealed class GroupTabEditController
     private readonly Func<bool> _isShowingAllGroups;
     private readonly Func<AppConfig, bool> _isReducedMotion;
     private readonly Action _onSelectAllGroups;
+    private readonly Action<int> _onSelectGroup;
     private readonly Action<MenuInfo, int> _onAfterGroupCreated;
     private readonly Action _syncGroupTabItems;
     private readonly LauncherIconSelectionController<IconInfo> _iconSelection;
@@ -74,6 +75,7 @@ internal sealed class GroupTabEditController
         Func<bool> isShowingAllGroups,
         Func<AppConfig, bool> isReducedMotion,
         Action onSelectAllGroups,
+        Action<int> onSelectGroup,
         Action<MenuInfo, int> onAfterGroupCreated,
         Action syncGroupTabItems)
     {
@@ -98,6 +100,7 @@ internal sealed class GroupTabEditController
         _isShowingAllGroups = isShowingAllGroups;
         _isReducedMotion = isReducedMotion;
         _onSelectAllGroups = onSelectAllGroups;
+        _onSelectGroup = onSelectGroup;
         _onAfterGroupCreated = onAfterGroupCreated;
         _syncGroupTabItems = syncGroupTabItems;
     }
@@ -331,15 +334,16 @@ internal sealed class GroupTabEditController
         }
 
         int newIndex = appData.MenuList.IndexOf(info);
-        _onAfterGroupCreated(info, newIndex);
+        _syncGroupTabItems();
 
         dispatcher?.TryEnqueue(DispatcherQueuePriority.Normal, () =>
         {
             groupListView?.UpdateLayout();
+            _onAfterGroupCreated(info, newIndex);
             if (groupScrollViewer != null)
             {
                 double offset = groupScrollViewer.ScrollableHeight;
-                if (offset > 0) groupScrollViewer.ChangeView(null, offset, null, appData.AppConfig.PMModel);
+                if (offset > 0) groupScrollViewer.ChangeView(null, offset, null, false);
             }
             ScheduleSelectionIndicatorUpdate(newIndex, animate: false,
                 groupListView, groupScrollViewer, selectionIndicatorElement, dispatcher);
@@ -464,8 +468,27 @@ internal sealed class GroupTabEditController
 
         if (removed)
         {
-            _onSelectAllGroups();
+            SelectGroupAfterDelete(index);
         }
+    }
+
+    private void SelectGroupAfterDelete(int deletedIndex)
+    {
+        AppData appData = _getAppData();
+        if (appData.MenuList.Count == 0)
+        {
+            _onSelectAllGroups();
+            return;
+        }
+
+        // 删除分组后默认切换到其上一个分组；删除第一个分组时切换到新的第一个分组。
+        int targetIndex = deletedIndex > 0 ? deletedIndex - 1 : 0;
+        if (targetIndex >= appData.MenuList.Count)
+        {
+            targetIndex = appData.MenuList.Count - 1;
+        }
+
+        _onSelectGroup(targetIndex);
     }
 
     private bool RemoveGroupFromData(MenuInfo menuInfo)

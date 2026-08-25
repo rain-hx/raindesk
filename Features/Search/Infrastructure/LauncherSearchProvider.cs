@@ -32,6 +32,8 @@ public sealed class LauncherSearchProvider : ISearchProvider
         string term = keyword.Trim();
         IReadOnlyList<SearchResult> results = _dataProvider.Read(data => data.MenuList
             .SelectMany(menu => EnumerateSearchableIcons(menu.IconList))
+            .Concat(EnumerateSearchableIcons(data.AppConfig.AllGroupsIconList))
+            .Distinct()
             .Where(icon => !icon.IsAddShortcut_NoWrite && Matches(icon, term))
             .Take(maxResults)
             .Select(icon => IconSearchResultMapper.FromIcon(icon, ProviderId))

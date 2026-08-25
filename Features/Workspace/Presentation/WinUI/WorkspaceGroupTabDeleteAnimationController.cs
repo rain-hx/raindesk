@@ -3,12 +3,14 @@ using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Media;
 using Microsoft.UI.Xaml.Media.Animation;
+using raindesk.Controls;
 using Windows.Foundation;
 
 namespace raindesk.Features.Workspace.Presentation.WinUI;
 
 /// <summary>
-/// Workspace 分组标签删除的淡出、缩放、宽度折叠和延迟 Transition 恢复。
+/// Workspace 分组标签删除的淡出和缩放。避免对 Width/Margin 做布局属性动画，
+/// 布局收缩由容器在动画完成后一次性处理。
 /// </summary>
 internal sealed class WorkspaceGroupTabDeleteAnimationController
 {
@@ -18,12 +20,8 @@ internal sealed class WorkspaceGroupTabDeleteAnimationController
     {
         ArgumentNullException.ThrowIfNull(container);
         var completion = new System.Threading.Tasks.TaskCompletionSource<bool>();
-        var easing = new CubicEase { EasingMode = EasingMode.EaseIn };
+        var easing = MotionTokens.EaseIn();
 
-        container.UpdateLayout();
-        double startWidth = container.ActualWidth > 0d
-            ? container.ActualWidth
-            : container.DesiredSize.Width;
         container.IsHitTestVisible = false;
         container.RenderTransformOrigin = new Point(0.5d, 0.5d);
         var scale = new ScaleTransform { ScaleX = 1d, ScaleY = 1d };
@@ -45,14 +43,14 @@ internal sealed class WorkspaceGroupTabDeleteAnimationController
             From = 1d,
             To = 0.72d,
             Duration = duration,
-            EasingFunction = new CubicEase { EasingMode = EasingMode.EaseInOut }
+            EasingFunction = easing
         };
         var scaleY = new DoubleAnimation
         {
             From = 1d,
             To = 0.72d,
             Duration = duration,
-            EasingFunction = new CubicEase { EasingMode = EasingMode.EaseInOut }
+            EasingFunction = easing
         };
         Storyboard.SetTarget(scaleX, scale);
         Storyboard.SetTargetProperty(scaleX, "ScaleX");
@@ -61,27 +59,6 @@ internal sealed class WorkspaceGroupTabDeleteAnimationController
         storyboard.Children.Add(fadeOut);
         storyboard.Children.Add(scaleX);
         storyboard.Children.Add(scaleY);
-
-        if (startWidth > 0d)
-        {
-            double totalWidth = startWidth + container.Margin.Left + container.Margin.Right;
-            container.Width = totalWidth;
-            container.Margin = new Thickness(
-                container.Margin.Left,
-                container.Margin.Top,
-                0d,
-                container.Margin.Bottom);
-            var collapseWidth = new DoubleAnimation
-            {
-                From = totalWidth,
-                To = 0d,
-                Duration = duration,
-                EasingFunction = easing
-            };
-            Storyboard.SetTarget(collapseWidth, container);
-            Storyboard.SetTargetProperty(collapseWidth, "Width");
-            storyboard.Children.Add(collapseWidth);
-        }
 
         storyboard.Completed += (_, _) =>
         {

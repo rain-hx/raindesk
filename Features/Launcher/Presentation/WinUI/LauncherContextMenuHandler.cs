@@ -25,6 +25,7 @@ namespace raindesk.Features.Launcher.Presentation.WinUI;
 /// </summary>
 internal sealed class LauncherContextMenuHandler
 {
+    private const long DoubleTapIntervalMs = 500;
     private readonly LauncherContextMenuCoordinator<IconInfo> _contextMenu;
     private readonly LauncherContextMenuViewController<IconInfo> _contextMenuView;
     private readonly LauncherIconActivationCoordinator<IconInfo> _iconActivation;
@@ -38,6 +39,8 @@ internal sealed class LauncherContextMenuHandler
     private readonly Func<AppData> _getAppData;
     private readonly Func<LauncherBatchModeController<IconInfo>> _getBatchModeController;
     private readonly Func<BulkObservableCollection<IconInfo>> _getShortcutTiles;
+    private readonly Func<IReadOnlyList<IconInfo>> _getSelectedShortcutIcons;
+    private readonly Action _clearShortcutSelection;
     private readonly Action _rebuildShortcutTiles;
     private readonly Action _syncFolderOverlayAfterMutation;
     private readonly Action _refreshShortcutItemSpans;
@@ -47,6 +50,9 @@ internal sealed class LauncherContextMenuHandler
     // Cached context targets
     private IconInfo? _contextMenuIcon;
     private MenuInfo? _contextMenuGroup;
+    private IconInfo? _lastPressedIcon;
+    private long _previousPressTicks = -1;
+    private long _lastPressTicks = -1;
 
     public LauncherContextMenuHandler(
         LauncherContextMenuCoordinator<IconInfo> contextMenu,
@@ -62,6 +68,8 @@ internal sealed class LauncherContextMenuHandler
         Func<AppData> getAppData,
         Func<LauncherBatchModeController<IconInfo>> getBatchModeController,
         Func<BulkObservableCollection<IconInfo>> getShortcutTiles,
+        Func<IReadOnlyList<IconInfo>> getSelectedShortcutIcons,
+        Action clearShortcutSelection,
         Action rebuildShortcutTiles,
         Action syncFolderOverlayAfterMutation,
         Action refreshShortcutItemSpans,
@@ -81,6 +89,8 @@ internal sealed class LauncherContextMenuHandler
         _getAppData = getAppData;
         _getBatchModeController = getBatchModeController;
         _getShortcutTiles = getShortcutTiles;
+        _getSelectedShortcutIcons = getSelectedShortcutIcons;
+        _clearShortcutSelection = clearShortcutSelection;
         _rebuildShortcutTiles = rebuildShortcutTiles;
         _syncFolderOverlayAfterMutation = syncFolderOverlayAfterMutation;
         _refreshShortcutItemSpans = refreshShortcutItemSpans;
@@ -132,11 +142,40 @@ internal sealed class LauncherContextMenuHandler
 
     // ── Icon activation ───────────────────────────────────────────────
 
+    public void RecordIconPointerPress(IconInfo icon)
+    {
+        ArgumentNullException.ThrowIfNull(icon);
+        long now = Environment.TickCount64;
+        if (!ReferenceEquals(icon, _lastPressedIcon)
+            || _lastPressTicks < 0
+            || now - _lastPressTicks > DoubleTapIntervalMs)
+        {
+            _previousPressTicks = -1;
+        }
+        else
+        {
+            _previousPressTicks = _lastPressTicks;
+        }
+
+        _lastPressedIcon = icon;
+        _lastPressTicks = now;
+    }
+
     public void HandleIconTapped(object sender, TappedRoutedEventArgs e,
         Func<object, IconInfo?> getIconFromSender)
     {
         IconInfo? icon = getIconFromSender(sender);
         if (icon == null) return;
+
+        bool withinDoubleTapWindow = ReferenceEquals(icon, _lastPressedIcon)
+            && _previousPressTicks >= 0
+            && _lastPressTicks - _previousPressTicks <= DoubleTapIntervalMs;
+        _previousPressTicks = -1;
+        if (!withinDoubleTapWindow)
+        {
+            e.Handled = true;
+            return;
+        }
 
         AppData appData = _getAppData();
         e.Handled = _iconActivation.HandleTap(
@@ -240,14 +279,44 @@ internal sealed class LauncherContextMenuHandler
     {
         IconInfo? icon = resolveIcon(sender);
         if (icon == null) return;
-        LauncherMutationCommand? command = _contextMenu.CreateRemoveCommand(icon);
-        if (command == null) return;
 
-        bool confirmed = await DialogHelper.ConfirmDeleteAsync(icon.Name ?? "此快捷方式");
+        // 若右键目标包含在当前多选集合中，则删除全部选中项；否则只删除右键目标。
+        var selected = _getSelectedShortcutIcons()
+            .Where(candidate => !LauncherDragIconClassifier.IsAddShortcutPlaceholder(candidate))
+            .Distinct()
+            .ToList();
+
+        var targets = new List<IconInfo>();
+        if (selected.Count > 0 && selected.Contains(icon))
+        {
+            targets.AddRange(selected);
+        }
+        else if (!LauncherDragIconClassifier.IsAddShortcutPlaceholder(icon))
+        {
+            targets.Add(icon);
+        }
+
+        if (targets.Count == 0) return;
+
+        bool confirmed = targets.Count > 1
+            ? await DialogHelper.ConfirmDeleteAsync($"选中的 {targets.Count} 个快捷方式")
+            : await DialogHelper.ConfirmDeleteAsync(targets[0].Name ?? "此快捷方式");
         if (!confirmed) return;
 
-        if (ExecuteLauncherCommand(command))
+        bool anyRemoved = false;
+        foreach (IconInfo target in targets)
         {
+            LauncherMutationCommand? command = _contextMenu.CreateRemoveCommand(target);
+            if (command == null) continue;
+            if (ExecuteLauncherCommand(command))
+            {
+                anyRemoved = true;
+            }
+        }
+
+        if (anyRemoved)
+        {
+            _clearShortcutSelection();
             _syncFolderOverlayAfterMutation();
             _rebuildShortcutTiles();
         }

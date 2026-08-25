@@ -41,28 +41,6 @@
                             <ColumnDefinition Width="*"/>
                             <ColumnDefinition Width="Auto"/>
                         </Grid.ColumnDefinitions>
-                        <FontIcon Glyph="&#xE950;" FontFamily="Segoe Fluent Icons" FontSize="30"
-                                  Foreground="{ThemeResource raindeskBlueBrush}"
-                                  VerticalAlignment="Center"/>
-                        <StackPanel Grid.Column="1" VerticalAlignment="Center" Spacing="4">
-                            <TextBlock Text="性能模式" FontSize="16" FontWeight="SemiBold"/>
-                            <TextBlock Text="减少动画效果，提升运行性能"
-                                       Foreground="{ThemeResource SecondaryTextBrush}"
-                                       FontSize="13"/>
-                        </StackPanel>
-                        <ToggleSwitch Grid.Column="2"
-                                      IsOn="{Binding PMModel, Mode=TwoWay}"
-                                      OffContent=""
-                                      OnContent=""
-                                      AutomationProperties.Name="性能模式"/>
-                    </Grid>
-                    <Border Style="{StaticResource DividerLine}"/>
-                    <Grid MinHeight="72">
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="58"/>
-                            <ColumnDefinition Width="*"/>
-                            <ColumnDefinition Width="Auto"/>
-                        </Grid.ColumnDefinitions>
                         <FontIcon Glyph="&#xE7F4;" FontFamily="Segoe Fluent Icons" FontSize="30"
                                   Foreground="{ThemeResource raindeskBlueBrush}"
                                   VerticalAlignment="Center"/>

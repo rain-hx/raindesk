@@ -102,12 +102,6 @@ namespace raindesk.Control.UserControls.Config
 
         private void ShowPanel(string tag)
         {
-            if (tag == "Help")
-            {
-                _ = raindesk.Util.HelpHelper.ShowHelpAsync();
-                return;
-            }
-
             if (!pages.TryGetValue(tag, out FrameworkElement? page))
             {
                 page = pageResolver.Create(tag);
@@ -129,7 +123,7 @@ namespace raindesk.Control.UserControls.Config
                 if (shouldAnimate)
                 {
                     DispatcherQueue.TryEnqueue(() =>
-                        SurfaceMotion.PlayEntrance(RightCard, translateX: 8d, translateY: 0d, duration: MotionTokens.Fast));
+                        SurfaceMotion.PlaySecondaryEntrance(RightCard, translateX: MotionTokens.DisplacementSecondary, translateY: 0d, duration: MotionTokens.Fast));
                 }
             }
         }
@@ -142,7 +136,6 @@ namespace raindesk.Control.UserControls.Config
                 ConfigTabs.Items.Add(CreateTab(section.Id, section.Title, section.IconGlyph));
             }
 
-            ConfigTabs.Items.Add(CreateTab("Help", "帮助", "\uE897"));
             ConfigTabs.SelectedIndex = sectionCatalog.Sections.Count > 0 ? 0 : -1;
         }
 

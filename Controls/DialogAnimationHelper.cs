@@ -8,9 +8,6 @@ namespace raindesk.Controls
 {
     internal static class DialogAnimationHelper
     {
-        private const int EntranceDurationMs = 320;
-        private const int ExitDurationMs = 220;
-
         private static bool IsEnabled => MotionPreferences.ShouldAnimate;
 
         public static void PlayEntrance(FrameworkElement target, Action? onComplete = null)
@@ -25,19 +22,26 @@ namespace raindesk.Controls
             try
             {
                 target.RenderTransformOrigin = new Point(0.5, 0.5);
-                var transform = new CompositeTransform();
-                target.RenderTransform = transform;
+                CompositeTransform transform = EnsureTransform(target);
+
+                // 首次进入（元素处于静止终态）先写入起始值；否则视为从中途续播，不重置视觉状态。
+                if (target.Opacity >= 0.99d)
+                {
+                    transform.ScaleX = MotionTokens.DialogEnterScale;
+                    transform.ScaleY = MotionTokens.DialogEnterScale;
+                    transform.TranslateY = MotionTokens.DisplacementSecondary;
+                    target.Opacity = 0d;
+                }
 
                 var storyboard = new Storyboard();
-                var motionDuration = TimeSpan.FromMilliseconds(EntranceDurationMs);
-                var fadeDuration = TimeSpan.FromMilliseconds(220);
-                var motionEase = new QuinticEase { EasingMode = EasingMode.EaseOut };
-                var fadeEase = new QuadraticEase { EasingMode = EasingMode.EaseOut };
+                var motionDuration = MotionTokens.Standard;
+                var fadeDuration = TimeSpan.FromMilliseconds(Math.Min(180d, motionDuration.TotalMilliseconds));
+                var motionEase = MotionTokens.EaseOut();
 
-                AddDoubleAnimation(storyboard, transform, "ScaleX", 0.96, 1, motionDuration, motionEase);
-                AddDoubleAnimation(storyboard, transform, "ScaleY", 0.96, 1, motionDuration, motionEase);
-                AddDoubleAnimation(storyboard, transform, "TranslateY", 8, 0, motionDuration, motionEase);
-                AddDoubleAnimation(storyboard, target, "Opacity", 0, 1, fadeDuration, fadeEase);
+                AddDoubleAnimation(storyboard, transform, "ScaleX", 1, motionDuration, motionEase);
+                AddDoubleAnimation(storyboard, transform, "ScaleY", 1, motionDuration, motionEase);
+                AddDoubleAnimation(storyboard, transform, "TranslateY", 0, motionDuration, motionEase);
+                AddDoubleAnimation(storyboard, target, "Opacity", 1, fadeDuration, motionEase);
 
                 storyboard.Completed += (_, _) =>
                 {
@@ -65,15 +69,15 @@ namespace raindesk.Controls
             {
                 CompositeTransform transform = EnsureTransform(target);
                 var storyboard = new Storyboard();
-                var motionDuration = TimeSpan.FromMilliseconds(ExitDurationMs);
-                var fadeDuration = TimeSpan.FromMilliseconds(180);
-                var motionEase = new QuadraticEase { EasingMode = EasingMode.EaseIn };
-                var fadeEase = new QuadraticEase { EasingMode = EasingMode.EaseIn };
+                var motionDuration = MotionTokens.Exit;
+                var fadeDuration = TimeSpan.FromMilliseconds(Math.Min(150d, motionDuration.TotalMilliseconds));
+                var motionEase = MotionTokens.EaseIn();
 
-                AddDoubleAnimation(storyboard, transform, "ScaleX", transform.ScaleX, 0.96, motionDuration, motionEase);
-                AddDoubleAnimation(storyboard, transform, "ScaleY", transform.ScaleY, 0.96, motionDuration, motionEase);
-                AddDoubleAnimation(storyboard, transform, "TranslateY", transform.TranslateY, 6, motionDuration, motionEase);
-                AddDoubleAnimation(storyboard, target, "Opacity", target.Opacity, 0, fadeDuration, fadeEase);
+                // 省略 From：从当前视觉状态收敛到退出终态，中途再次打开可反向续播。
+                AddDoubleAnimation(storyboard, transform, "ScaleX", MotionTokens.DialogExitScale, motionDuration, motionEase);
+                AddDoubleAnimation(storyboard, transform, "ScaleY", MotionTokens.DialogExitScale, motionDuration, motionEase);
+                AddDoubleAnimation(storyboard, transform, "TranslateY", MotionTokens.DisplacementFeedback, motionDuration, motionEase);
+                AddDoubleAnimation(storyboard, target, "Opacity", 0, fadeDuration, motionEase);
 
                 storyboard.Completed += (_, _) => onComplete();
                 storyboard.Begin();
@@ -128,14 +132,12 @@ namespace raindesk.Controls
             Storyboard storyboard,
             DependencyObject target,
             string property,
-            double from,
             double to,
             TimeSpan duration,
             EasingFunctionBase easing)
         {
             var animation = new DoubleAnimation
             {
-                From = from,
                 To = to,
                 Duration = duration,
                 EasingFunction = easing

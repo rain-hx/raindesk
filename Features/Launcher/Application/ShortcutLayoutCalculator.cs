@@ -35,22 +35,20 @@ internal readonly record struct ShortcutSlotHitTarget(
 
 internal static class ShortcutLayoutCalculator
 {
-    private const double MinSlotWidth = 88d;
+    private const double MinSlotWidth = 104d;
     private const double MinCardWidth = 88d;
     private const double MaxCardWidth = 88d;
     private const double MinGapWidth = 8d;
     private const double MaxGapWidth = 24d;
     private const double MinCompressedGapWidth = 4d;
-    private const double BaseSlotHeight = 94d;
-    private const double ShortcutAnimationSafePadding = 10d;
-    private const double SlotHeight = BaseSlotHeight + ShortcutAnimationSafePadding;
+    private const double DefaultSlotSize = 104d;
     private const int MaxColumns = 12;
 
     public static ShortcutLayoutMetrics Calculate(double availableWidth)
     {
         if (availableWidth <= 0d)
         {
-            return new ShortcutLayoutMetrics(1, MinCardWidth, SlotHeight, MinCardWidth, 0d);
+            return new ShortcutLayoutMetrics(1, DefaultSlotSize, DefaultSlotSize, MinCardWidth, 0d);
         }
 
         int columnCount = CalculateOptimalColumns(availableWidth);
@@ -362,7 +360,8 @@ internal static class ShortcutLayoutCalculator
     {
         double slotWidth = availableWidth / columnCount;
         ComputeCardAndGap(slotWidth, out double cardWidth, out double gapWidth);
-        return new ShortcutLayoutMetrics(columnCount, slotWidth, SlotHeight, cardWidth, gapWidth, 0d);
+        // 每个启动器项目使用统一正方形槽位，图标与标题作为一个整体排列。
+        return new ShortcutLayoutMetrics(columnCount, slotWidth, slotWidth, cardWidth, gapWidth, 0d);
     }
 
     private static int CalculateOptimalColumns(double availableWidth)

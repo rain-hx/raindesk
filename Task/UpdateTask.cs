@@ -43,7 +43,7 @@ namespace raindesk.Task
         private const string DefaultGitHubUpdateUrl = "https://api.github.com/repos/rymcu/raindesk/releases/latest";
         private const string DefaultVersion = "1.0.01";
 
-        private static void Timer_Elapsed(object? sender, System.Timers.ElapsedEventArgs e)
+        private static async void Timer_Elapsed(object? sender, System.Timers.ElapsedEventArgs e)
         {
             try
             {
@@ -65,7 +65,9 @@ namespace raindesk.Task
                     }
                 }
 
-                string updateInfo = HttpUtil.Get(updateUrl);
+                string updateInfo = await System.Threading.Tasks.Task.Run(
+                    () => HttpUtil.GetAsync(updateUrl),
+                    System.Threading.CancellationToken.None);
                 if (StringUtil.IsEmpty(updateInfo)) return;
 
                 JObject jo = JObject.Parse(updateInfo);
@@ -80,7 +82,7 @@ namespace raindesk.Task
                         {
                             string uuid = AppCfg?.TrackingUuid ?? CommonCode.GetUniqueUUID();
                             statisticUrl += "?uuid=" + uuid;
-                            HttpUtil.Get(statisticUrl);
+                            _ = HttpUtil.GetAsync(statisticUrl);
                         }
                     }
                 }

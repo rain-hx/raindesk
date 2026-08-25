@@ -131,41 +131,12 @@ namespace raindesk.Util
             var result = new LnkInfo();
             try
             {
-                var task = System.Threading.Tasks.Task.Run(() =>
+                if (TryRunSynchronously(() => GetLnkInfoCore(filePath), out LnkInfo? core))
                 {
-                    try
-                    {
-                        dynamic shell = CreateWshShell();
-                        dynamic shortcut = shell.CreateShortcut(filePath);
-
-                        // 目标路径
-                        string targetPath = (string)shortcut.TargetPath;
-                        // PERF: Use pre-compiled regex instead of parsing pattern string each call.
-                        if (!StringUtil.IsEmpty(targetPath) && !_noPathRegex.IsMatch(targetPath))
-                        {
-                            result.TargetPath = targetPath;
-                        }
-                        else
-                        {
-                            result.TargetPath = ParseShortcut(filePath);
-                        }
-
-                        // 图标路径
-                        string iconPath = (string)shortcut.IconLocation;
-                        if (!StringUtil.IsEmpty(iconPath)
-                            && !_noIcoRegex.IsMatch(iconPath)
-                            && !_noPathRegex.IsMatch(iconPath)
-                            && _haveIcoRegex.IsMatch(iconPath))
-                        {
-                            result.IconPath = iconPath.Split(',')[0];
-                        }
-
-                        // 启动参数
-                        result.Arguments = (string)shortcut.Arguments;
-                    }
-                    catch { }
-                });
-                task.Wait(3000);
+                    result.TargetPath = core.TargetPath;
+                    result.IconPath = core.IconPath;
+                    result.Arguments = core.Arguments;
+                }
             }
             catch { }
             return result;
@@ -176,77 +147,27 @@ namespace raindesk.Util
         /// </summary>
         public static async Task<LnkInfo> GetLnkInfoAsync(string filePath)
         {
-            var result = new LnkInfo();
             try
             {
-                await System.Threading.Tasks.Task.Run(() =>
-                {
-                    try
-                    {
-                        dynamic shell = CreateWshShell();
-                        dynamic shortcut = shell.CreateShortcut(filePath);
-
-                        string targetPath = (string)shortcut.TargetPath;
-                        if (!StringUtil.IsEmpty(targetPath) && !_noPathRegex.IsMatch(targetPath))
-                        {
-                            result.TargetPath = targetPath;
-                        }
-                        else
-                        {
-                            result.TargetPath = ParseShortcut(filePath);
-                        }
-
-                        string iconPath = (string)shortcut.IconLocation;
-                        if (!StringUtil.IsEmpty(iconPath)
-                            && !_noIcoRegex.IsMatch(iconPath)
-                            && !_noPathRegex.IsMatch(iconPath)
-                            && _haveIcoRegex.IsMatch(iconPath))
-                        {
-                            result.IconPath = iconPath.Split(',')[0];
-                        }
-
-                        result.Arguments = (string)shortcut.Arguments;
-                    }
-                    catch { }
-                }).WaitAsync(TimeSpan.FromMilliseconds(3000));
+                return await RunAsync(() => GetLnkInfoCore(filePath));
             }
-            catch { }
-            return result;
+            catch
+            {
+                return new LnkInfo();
+            }
         }
 
         public static string GetTargetPathByLnk(string filePath)
         {
             try
             {
-                string result = null;
-                var task = System.Threading.Tasks.Task.Run(() =>
-                {
-                    try
-                    {
-                        dynamic shell = CreateWshShell();
-                        dynamic shortcut = shell.CreateShortcut(filePath);
-                        if (StringUtil.IsEmpty((string)shortcut.TargetPath))
-                        {
-                            return;
-                        }
-                        string path = (string)shortcut.TargetPath;
-                        if (path == null || _noPathRegex.IsMatch(path))
-                        {
-                            path = ParseShortcut(filePath);
-                        }
-                        result = path;
-                    }
-                    catch { }
-                });
-                if (task.Wait(3000))
+                if (TryRunSynchronously(() => GetTargetPathCore(filePath), out string? result))
                 {
                     return result;
                 }
-                else
-                {
-                    LogUtil.WriteErrorLog(new TimeoutException(), "获取目标路径超时! filePath=" + filePath);
-                    return null;
-                }
+
+                LogUtil.WriteErrorLog(new TimeoutException(), "获取目标路径超时! filePath=" + filePath);
+                return null;
             }
             catch (Exception e)
             {
@@ -262,27 +183,7 @@ namespace raindesk.Util
         {
             try
             {
-                string result = null;
-                await global::System.Threading.Tasks.Task.Run(() =>
-                {
-                    try
-                    {
-                        dynamic shell = CreateWshShell();
-                        dynamic shortcut = shell.CreateShortcut(filePath);
-                        if (StringUtil.IsEmpty((string)shortcut.TargetPath))
-                        {
-                            return;
-                        }
-                        string path = (string)shortcut.TargetPath;
-                        if (path == null || _noPathRegex.IsMatch(path))
-                        {
-                            path = ParseShortcut(filePath);
-                        }
-                        result = path;
-                    }
-                    catch { }
-                }).WaitAsync(TimeSpan.FromMilliseconds(3000));
-                return result;
+                return await RunAsync(() => GetTargetPathCore(filePath));
             }
             catch (TimeoutException)
             {
@@ -305,23 +206,10 @@ namespace raindesk.Util
         {
             try
             {
-                if (File.Exists(filePath))
+                if (File.Exists(filePath)
+                    && TryRunSynchronously(() => GetArgCore(filePath), out string? result))
                 {
-                    string result = "";
-                    var task = System.Threading.Tasks.Task.Run(() =>
-                    {
-                        try
-                        {
-                            dynamic shell = CreateWshShell();
-                            dynamic shortcut = shell.CreateShortcut(filePath);
-                            result = (string)shortcut.Arguments;
-                        }
-                        catch { }
-                    });
-                    if (task.Wait(3000))
-                    {
-                        return result;
-                    }
+                    return result;
                 }
             }
             catch (Exception e)
@@ -340,18 +228,7 @@ namespace raindesk.Util
             {
                 if (File.Exists(filePath))
                 {
-                    string result = "";
-                    await global::System.Threading.Tasks.Task.Run(() =>
-                    {
-                        try
-                        {
-                            dynamic shell = CreateWshShell();
-                            dynamic shortcut = shell.CreateShortcut(filePath);
-                            result = (string)shortcut.Arguments;
-                        }
-                        catch { }
-                    }).WaitAsync(TimeSpan.FromMilliseconds(3000));
-                    return result;
+                    return await RunAsync(() => GetArgCore(filePath));
                 }
             }
             catch (Exception e)
@@ -370,33 +247,9 @@ namespace raindesk.Util
         {
             try
             {
-                string iconPath = null;
-                var task = System.Threading.Tasks.Task.Run(() =>
-                {
-                    try
-                    {
-                        dynamic shell = CreateWshShell();
-                        dynamic shortcut = shell.CreateShortcut(filePath);
-                        iconPath = (string)shortcut.IconLocation;
-                    }
-                    catch { }
-                });
-                if (!task.Wait(3000))
-                {
-                    return null;
-                }
-
-                if (StringUtil.IsEmpty(iconPath)
-                    || _noIcoRegex.IsMatch(iconPath)
-                    || _noPathRegex.IsMatch(iconPath)
-                    || !_haveIcoRegex.IsMatch(iconPath))
-                {
-                    return null;
-                }
-                else
-                {
-                    return iconPath.Split(',')[0];
-                }
+                return TryRunSynchronously(() => GetIconPathCore(filePath), out string? result)
+                    ? result
+                    : null;
             }
             catch (Exception e)
             {
@@ -412,29 +265,7 @@ namespace raindesk.Util
         {
             try
             {
-                string iconPath = null;
-                await global::System.Threading.Tasks.Task.Run(() =>
-                {
-                    try
-                    {
-                        dynamic shell = CreateWshShell();
-                        dynamic shortcut = shell.CreateShortcut(filePath);
-                        iconPath = (string)shortcut.IconLocation;
-                    }
-                    catch { }
-                }).WaitAsync(TimeSpan.FromMilliseconds(3000));
-
-                if (StringUtil.IsEmpty(iconPath)
-                    || _noIcoRegex.IsMatch(iconPath)
-                    || _noPathRegex.IsMatch(iconPath)
-                    || !_haveIcoRegex.IsMatch(iconPath))
-                {
-                    return null;
-                }
-                else
-                {
-                    return iconPath.Split(',')[0];
-                }
+                return await RunAsync(() => GetIconPathCore(filePath));
             }
             catch (TimeoutException)
             {
@@ -446,6 +277,127 @@ namespace raindesk.Util
                 LogUtil.WriteErrorLog(e, "获取图标路径失败! filePath=" + filePath);
                 return null;
             }
+        }
+
+        // ── lnk 解析公共核心 ──────────────────────────────────────────────
+        // COM 调用有卡死风险，统一在后台线程执行并加 3s 超时；
+        // 同步/异步入口共享同一份解析逻辑，避免重复维护。
+
+        private const int LnkResolutionTimeoutMs = 3000;
+
+        private static dynamic CreateShortcut(string filePath)
+        {
+            dynamic shell = CreateWshShell();
+            return shell.CreateShortcut(filePath);
+        }
+
+        private static LnkInfo GetLnkInfoCore(string filePath)
+        {
+            var result = new LnkInfo();
+            try
+            {
+                dynamic shortcut = CreateShortcut(filePath);
+
+                string targetPath = (string)shortcut.TargetPath;
+                if (!StringUtil.IsEmpty(targetPath) && !_noPathRegex.IsMatch(targetPath))
+                {
+                    result.TargetPath = targetPath;
+                }
+                else
+                {
+                    result.TargetPath = ParseShortcut(filePath);
+                }
+
+                string iconPath = (string)shortcut.IconLocation;
+                if (!StringUtil.IsEmpty(iconPath)
+                    && !_noIcoRegex.IsMatch(iconPath)
+                    && !_noPathRegex.IsMatch(iconPath)
+                    && _haveIcoRegex.IsMatch(iconPath))
+                {
+                    result.IconPath = iconPath.Split(',')[0];
+                }
+
+                result.Arguments = (string)shortcut.Arguments;
+            }
+            catch { }
+            return result;
+        }
+
+        private static string? GetTargetPathCore(string filePath)
+        {
+            try
+            {
+                dynamic shortcut = CreateShortcut(filePath);
+                if (StringUtil.IsEmpty((string)shortcut.TargetPath))
+                {
+                    return null;
+                }
+
+                string path = (string)shortcut.TargetPath;
+                if (path == null || _noPathRegex.IsMatch(path))
+                {
+                    path = ParseShortcut(filePath);
+                }
+                return path;
+            }
+            catch { }
+            return null;
+        }
+
+        private static string GetArgCore(string filePath)
+        {
+            try
+            {
+                dynamic shortcut = CreateShortcut(filePath);
+                return (string)shortcut.Arguments;
+            }
+            catch { }
+            return "";
+        }
+
+        private static string? GetIconPathCore(string filePath)
+        {
+            try
+            {
+                dynamic shortcut = CreateShortcut(filePath);
+                string iconPath = (string)shortcut.IconLocation;
+                if (StringUtil.IsEmpty(iconPath)
+                    || _noIcoRegex.IsMatch(iconPath)
+                    || _noPathRegex.IsMatch(iconPath)
+                    || !_haveIcoRegex.IsMatch(iconPath))
+                {
+                    return null;
+                }
+
+                return iconPath.Split(',')[0];
+            }
+            catch { }
+            return null;
+        }
+
+        /// <summary>
+        /// 在后台线程执行并阻塞等待，超时返回 false（不抛出）。
+        /// </summary>
+        private static bool TryRunSynchronously<T>(Func<T> action, out T? result)
+        {
+            result = default;
+            var task = System.Threading.Tasks.Task.Run(action);
+            if (!task.Wait(LnkResolutionTimeoutMs))
+            {
+                return false;
+            }
+
+            result = task.Result;
+            return true;
+        }
+
+        /// <summary>
+        /// 在后台线程执行并支持超时取消；超时抛出 <see cref="TimeoutException"/>。
+        /// </summary>
+        private static async Task<T> RunAsync<T>(Func<T> action)
+        {
+            return await System.Threading.Tasks.Task.Run(action)
+                .WaitAsync(TimeSpan.FromMilliseconds(LnkResolutionTimeoutMs));
         }
 
 

@@ -24,9 +24,19 @@ public interface ISaveService
     void CancelPendingSave();
 
     /// <summary>
+    /// 异步取消尚未执行的防抖保存，并等待已经开始的保存结束。
+    /// </summary>
+    global::System.Threading.Tasks.Task CancelPendingSaveAsync(global::System.Threading.CancellationToken cancellationToken = default);
+
+    /// <summary>
     /// 立即写入并取消待执行的防抖保存。
     /// 适用于退出、备份前等需要确保数据落盘的场景。
     /// </summary>
     void Flush();
+
+    /// <summary>
+    /// 异步立即写入并取消待执行的防抖保存。
+    /// </summary>
+    global::System.Threading.Tasks.Task FlushAsync(global::System.Threading.CancellationToken cancellationToken = default);
 
 }

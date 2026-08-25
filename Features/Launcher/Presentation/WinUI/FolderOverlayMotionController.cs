@@ -13,15 +13,16 @@ internal sealed class FolderOverlayMotionController
     public void Enter(FrameworkElement overlay, FrameworkElement panel, bool animate)
     {
         Stop();
-        Prepare(panel, out ScaleTransform scale);
-        Reset(overlay, panel, scale);
+        Prepare(panel, out CompositeTransform transform);
+        Reset(overlay, panel, transform);
         if (!animate) return;
 
         overlay.Opacity = 0d;
-        panel.Opacity = 0d;
-        scale.ScaleX = 0.96d;
-        scale.ScaleY = 0.96d;
-        _storyboard = Build(overlay, panel, scale, 1d, 1d, 1d,
+        panel.Opacity = 1d;
+        transform.ScaleX = MotionTokens.FolderOverlayEnterScale;
+        transform.ScaleY = MotionTokens.FolderOverlayEnterScale;
+        transform.TranslateY = MotionTokens.DisplacementSecondary;
+        _storyboard = Build(overlay, panel, transform, 1d, 1d, 0d,
             MotionTokens.Standard, MotionTokens.EaseOut());
         _storyboard.Begin();
     }
@@ -30,22 +31,22 @@ internal sealed class FolderOverlayMotionController
     {
         ArgumentNullException.ThrowIfNull(completed);
         Stop();
-        Prepare(panel, out ScaleTransform scale);
+        Prepare(panel, out CompositeTransform transform);
         if (!animate)
         {
-            Reset(overlay, panel, scale);
+            Reset(overlay, panel, transform);
             completed();
             return;
         }
 
-        _storyboard = Build(overlay, panel, scale, 0d, 0d, 0.98d,
+        _storyboard = Build(overlay, panel, transform, 0d, 0.98d, MotionTokens.DisplacementSecondary,
             MotionTokens.Exit, MotionTokens.EaseIn());
         Storyboard active = _storyboard;
         active.Completed += (_, _) =>
         {
             if (!ReferenceEquals(_storyboard, active)) return;
             _storyboard = null;
-            Reset(overlay, panel, scale);
+            Reset(overlay, panel, transform);
             completed();
         };
         active.Begin();
@@ -58,14 +59,14 @@ internal sealed class FolderOverlayMotionController
     }
 
     private static Storyboard Build(FrameworkElement overlay, FrameworkElement panel,
-        ScaleTransform scale, double overlayOpacity, double panelOpacity, double panelScale,
+        CompositeTransform transform, double overlayOpacity, double panelScale, double panelTranslateY,
         TimeSpan duration, EasingFunctionBase easing)
     {
         var storyboard = new Storyboard();
         storyboard.Children.Add(Animation(overlay, "Opacity", overlayOpacity, duration, easing));
-        storyboard.Children.Add(Animation(panel, "Opacity", panelOpacity, duration, easing));
-        storyboard.Children.Add(Animation(scale, nameof(ScaleTransform.ScaleX), panelScale, duration, easing));
-        storyboard.Children.Add(Animation(scale, nameof(ScaleTransform.ScaleY), panelScale, duration, easing));
+        storyboard.Children.Add(Animation(transform, nameof(CompositeTransform.ScaleX), panelScale, duration, easing));
+        storyboard.Children.Add(Animation(transform, nameof(CompositeTransform.ScaleY), panelScale, duration, easing));
+        storyboard.Children.Add(Animation(transform, nameof(CompositeTransform.TranslateY), panelTranslateY, duration, easing));
         return storyboard;
     }
 
@@ -78,18 +79,19 @@ internal sealed class FolderOverlayMotionController
         return animation;
     }
 
-    private static void Prepare(FrameworkElement panel, out ScaleTransform scale)
+    private static void Prepare(FrameworkElement panel, out CompositeTransform transform)
     {
         panel.RenderTransformOrigin = new Point(0.5d, 0.5d);
-        scale = panel.RenderTransform as ScaleTransform ?? new ScaleTransform();
-        panel.RenderTransform = scale;
+        transform = panel.RenderTransform as CompositeTransform ?? new CompositeTransform();
+        panel.RenderTransform = transform;
     }
 
-    private static void Reset(FrameworkElement overlay, FrameworkElement panel, ScaleTransform scale)
+    private static void Reset(FrameworkElement overlay, FrameworkElement panel, CompositeTransform transform)
     {
         overlay.Opacity = 1d;
         panel.Opacity = 1d;
-        scale.ScaleX = 1d;
-        scale.ScaleY = 1d;
+        transform.ScaleX = 1d;
+        transform.ScaleY = 1d;
+        transform.TranslateY = 0d;
     }
 }

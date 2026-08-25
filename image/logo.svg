@@ -1,0 +1,98 @@
+<svg width="1024" height="1024" viewBox="0 0 1024 1024" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <!-- Main icon gradient -->
+    <linearGradient id="bgGrad" x1="250" y1="250" x2="830" y2="820" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#2F63FF"/>
+      <stop offset="0.45" stop-color="#069AF4"/>
+      <stop offset="1" stop-color="#4AF0A0"/>
+    </linearGradient>
+
+    <!-- Soft light overlays -->
+    <linearGradient id="waveGrad1" x1="220" y1="630" x2="840" y2="790" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#42B8FF" stop-opacity="0.45"/>
+      <stop offset="1" stop-color="#7AF8B9" stop-opacity="0.55"/>
+    </linearGradient>
+    <linearGradient id="waveGrad2" x1="250" y1="690" x2="840" y2="740" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#22A8FF" stop-opacity="0.36"/>
+      <stop offset="1" stop-color="#6EF0BC" stop-opacity="0.48"/>
+    </linearGradient>
+
+    <linearGradient id="dropGrad" x1="575" y1="520" x2="650" y2="650" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#F5FFFF"/>
+      <stop offset="0.55" stop-color="#7AE9EA"/>
+      <stop offset="1" stop-color="#28C8CC"/>
+    </linearGradient>
+
+    <linearGradient id="rainGrad" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#C8F6FF" stop-opacity="0.45"/>
+      <stop offset="1" stop-color="#C8F6FF" stop-opacity="0.12"/>
+    </linearGradient>
+
+    <filter id="iconShadow" x="130" y="150" width="780" height="780" filterUnits="userSpaceOnUse" color-interpolation-filters="sRGB">
+      <feDropShadow dx="0" dy="42" stdDeviation="46" flood-color="#1E72DB" flood-opacity="0.25"/>
+    </filter>
+
+    <filter id="innerGlow" x="210" y="190" width="660" height="660" filterUnits="userSpaceOnUse" color-interpolation-filters="sRGB">
+      <feGaussianBlur stdDeviation="22" result="blur"/>
+      <feBlend mode="screen" in="SourceGraphic" in2="blur"/>
+    </filter>
+
+    <filter id="whiteSoft" x="360" y="300" width="360" height="440" filterUnits="userSpaceOnUse">
+      <feDropShadow dx="0" dy="10" stdDeviation="14" flood-color="#0A5EBC" flood-opacity="0.22"/>
+      <feDropShadow dx="0" dy="-3" stdDeviation="8" flood-color="#FFFFFF" flood-opacity="0.65"/>
+    </filter>
+
+    <filter id="dropShadow" x="520" y="490" width="170" height="210" filterUnits="userSpaceOnUse">
+      <feDropShadow dx="0" dy="10" stdDeviation="12" flood-color="#047CA5" flood-opacity="0.26"/>
+      <feDropShadow dx="0" dy="-5" stdDeviation="9" flood-color="#FFFFFF" flood-opacity="0.5"/>
+    </filter>
+
+    <clipPath id="iconClip">
+      <rect x="212" y="192" width="620" height="620" rx="122"/>
+    </clipPath>
+  </defs>
+
+  <!-- transparent canvas -->
+
+  <g filter="url(#iconShadow)">
+    <rect x="212" y="192" width="620" height="620" rx="122" fill="url(#bgGrad)"/>
+
+    <g clip-path="url(#iconClip)">
+      <!-- subtle highlight blob -->
+      <ellipse cx="585" cy="440" rx="280" ry="260" fill="#28DFF2" opacity="0.18" filter="url(#innerGlow)"/>
+
+      <!-- rain streaks -->
+      <g stroke="url(#rainGrad)" stroke-width="5" stroke-linecap="round">
+        <path d="M335 335 L300 420"/>
+        <path d="M420 300 L390 380"/>
+        <path d="M505 210 L480 275"/>
+        <path d="M620 215 L590 288"/>
+        <path d="M770 342 L735 430"/>
+        <path d="M315 520 L280 630"/>
+        <path d="M420 610 L395 670"/>
+        <path d="M790 560 L765 635"/>
+      </g>
+
+      <!-- water waves -->
+      <path d="M212 630 C320 585 395 710 520 710 C640 710 702 638 832 628 L832 812 L212 812 Z" fill="url(#waveGrad1)"/>
+      <path d="M212 680 C335 652 390 755 530 748 C645 742 720 690 832 674 L832 812 L212 812 Z" fill="url(#waveGrad2)"/>
+      <path d="M212 700 C330 690 420 766 540 755 C665 743 720 705 832 705" stroke="#9DFFE1" stroke-opacity="0.22" stroke-width="18"/>
+
+      <!-- white r mark -->
+      <path d="M458 654 V428 C458 393 486 365 521 365 H620"
+            stroke="white"
+            stroke-width="78"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            filter="url(#whiteSoft)"/>
+
+      <!-- raindrop -->
+      <path d="M616 552 C616 552 570 609 570 647 C570 683 597 708 632 708 C666 708 693 683 693 648 C693 610 646 552 646 552 C637 541 625 541 616 552 Z"
+            fill="url(#dropGrad)"
+            filter="url(#dropShadow)"/>
+
+      <!-- raindrop highlight -->
+      <path d="M614 594 C602 613 596 632 599 651" stroke="#FFFFFF" stroke-opacity="0.35" stroke-width="8" stroke-linecap="round"/>
+    </g>
+  </g>
+</svg>

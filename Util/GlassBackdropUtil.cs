@@ -14,16 +14,22 @@ namespace raindesk.Util
         private static bool BlurEnabled => !AppServices.IsConfigured
             || AppServices.TryGet<IAppDataProvider>()?.Current.AppConfig.BlurEffect != false;
 
+        private static int BackgroundOpacity => !AppServices.IsConfigured
+            ? 100
+            : AppServices.TryGet<IAppDataProvider>()?.Current.AppConfig.BgOpacity ?? 100;
+
         public static void ApplyMainWindowGlass(MainWindow window)
         {
             if (window?.ContentGlassLayer == null) return;
 
             bool blurEnabled = BlurEnabled;
             bool isDark = ThemeService.IsDarkModeEffective();
+            double opacityScale = Math.Clamp(BackgroundOpacity, 0, 100) / 100.0;
             window.ContentGlassLayer.Background = CreateShellBrush(blurEnabled, isDark);
-            window.ContentGlassLayer.Visibility = blurEnabled
+            window.ContentGlassLayer.Visibility = blurEnabled && opacityScale > 0.01
                 ? Microsoft.UI.Xaml.Visibility.Visible
                 : Microsoft.UI.Xaml.Visibility.Collapsed;
+            window.ContentGlassLayer.Opacity = opacityScale;
         }
 
         public static void ApplyCardGlass(Border card)

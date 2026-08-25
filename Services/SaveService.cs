@@ -19,6 +19,8 @@ public sealed class SaveService : ISaveService, IDisposable
     private long _debounceGeneration;
     private readonly SemaphoreSlim _writeMutex = new(1, 1);
     private const int DebounceMs = 500;
+    private static readonly TimeSpan MutexWaitTimeout = TimeSpan.FromSeconds(2);
+    private bool _disposed;
 
     public SaveService(IAppDataProvider dataProvider, string filePath)
     {
@@ -53,7 +55,12 @@ public sealed class SaveService : ISaveService, IDisposable
 
     private void SaveDebouncedGeneration(long generation)
     {
-        _writeMutex.Wait();
+        if (!_writeMutex.Wait(MutexWaitTimeout))
+        {
+            LogUtil.WriteErrorLog(new TimeoutException(), "延迟保存等待写入互斥锁超时");
+            return;
+        }
+
         try
         {
             lock (_debounceLock)
@@ -81,29 +88,105 @@ public sealed class SaveService : ISaveService, IDisposable
     /// <inheritdoc/>
     public void CancelPendingSave()
     {
-        lock (_debounceLock)
+        CancelDebouncedTimer();
+
+        // 等待可能已经进入回调的旧保存退出，超时则记录而不是无限等待。
+        if (!_writeMutex.Wait(MutexWaitTimeout))
         {
-            ++_debounceGeneration;
-            _debounceTimer?.Dispose();
-            _debounceTimer = null;
+            LogUtil.WriteErrorLog(new TimeoutException(), "取消待保存时等待写入互斥锁超时");
+            return;
         }
 
-        // 等待可能已经进入回调的旧保存退出。
-        _writeMutex.Wait();
+        _writeMutex.Release();
+    }
+
+    /// <inheritdoc/>
+    public async global::System.Threading.Tasks.Task CancelPendingSaveAsync(CancellationToken cancellationToken = default)
+    {
+        CancelDebouncedTimer();
+
+        try
+        {
+            await _writeMutex.WaitAsync(MutexWaitTimeout, cancellationToken).ConfigureAwait(false);
+        }
+        catch (OperationCanceledException)
+        {
+            return;
+        }
+        catch (TimeoutException ex)
+        {
+            LogUtil.WriteErrorLog(ex, "取消待保存时等待写入互斥锁超时");
+            return;
+        }
+
         _writeMutex.Release();
     }
 
     /// <inheritdoc/>
     public void Flush()
     {
-        CancelPendingSave();
-        SaveNow();
+        CancelDebouncedTimer();
+
+        try
+        {
+            var snapshot = _dataProvider.GetSnapshot();
+            MutexProtectedWrite(_filePath, snapshot.Json);
+        }
+        catch (Exception ex)
+        {
+            LogUtil.WriteErrorLog(ex, "保存数据失败");
+        }
+    }
+
+    /// <inheritdoc/>
+    public async global::System.Threading.Tasks.Task FlushAsync(CancellationToken cancellationToken = default)
+    {
+        CancelDebouncedTimer();
+
+        try
+        {
+            var snapshot = _dataProvider.GetSnapshot();
+            await MutexProtectedWriteAsync(_filePath, snapshot.Json, cancellationToken).ConfigureAwait(false);
+        }
+        catch (OperationCanceledException)
+        {
+        }
+        catch (Exception ex)
+        {
+            LogUtil.WriteErrorLog(ex, "保存数据失败");
+        }
     }
 
     public void Dispose()
     {
-        CancelPendingSave();
+        if (_disposed) return;
+        _disposed = true;
+        CancelDebouncedTimer();
+
+        if (!_writeMutex.Wait(MutexWaitTimeout))
+        {
+            LogUtil.WriteErrorLog(new TimeoutException(), "释放保存服务时等待写入互斥锁超时");
+        }
+        else
+        {
+            _writeMutex.Release();
+        }
+
         _writeMutex.Dispose();
+    }
+
+    /// <summary>
+    /// 取消当前防抖计时器并使已经排队的回调失效。
+    /// 所有立即保存、刷新和释放路径都必须先调用它，避免重复维护竞态处理。
+    /// </summary>
+    private void CancelDebouncedTimer()
+    {
+        lock (_debounceLock)
+        {
+            ++_debounceGeneration;
+            _debounceTimer?.Dispose();
+            _debounceTimer = null;
+        }
     }
 
     // ── 文件写入原语 ──────────────────────────────────────────────
@@ -113,7 +196,12 @@ public sealed class SaveService : ISaveService, IDisposable
     /// </summary>
     private void MutexProtectedWrite(string filePath, string content)
     {
-        _writeMutex.Wait();
+        if (!_writeMutex.Wait(MutexWaitTimeout))
+        {
+            LogUtil.WriteErrorLog(new TimeoutException(), "等待写入互斥锁超时");
+            return;
+        }
+
         try
         {
             SafeFileWriter.WriteAllText(filePath, content);
@@ -124,4 +212,16 @@ public sealed class SaveService : ISaveService, IDisposable
         }
     }
 
+    private async global::System.Threading.Tasks.Task MutexProtectedWriteAsync(string filePath, string content, CancellationToken cancellationToken)
+    {
+        await _writeMutex.WaitAsync(MutexWaitTimeout, cancellationToken).ConfigureAwait(false);
+        try
+        {
+            SafeFileWriter.WriteAllText(filePath, content);
+        }
+        finally
+        {
+            _writeMutex.Release();
+        }
+    }
 }

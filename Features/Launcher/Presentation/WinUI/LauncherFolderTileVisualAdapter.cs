@@ -15,6 +15,7 @@ public static class LauncherFolderTileVisualAdapter
     private const double StackSpacing = 8d;
     private const double PreviewSafePadding = 6d;
     private const double PreviewIconGap = 4d;
+    private const double PreviewCellSize = 16d;
 
     public static void Apply(
         ListView listView,
@@ -27,23 +28,21 @@ public static class LauncherFolderTileVisualAdapter
         {
             return;
         }
-        if (!LauncherShortcutItemSpanAdapter.SupportsVariableSize(listView.ItemsPanelRoot))
-        {
-            LauncherShortcutItemSpanAdapter.ResetTemplate(templateRoot);
-            return;
-        }
 
+        bool supportsVariableSize = LauncherShortcutItemSpanAdapter.SupportsVariableSize(listView.ItemsPanelRoot);
         ShortcutLayoutMetrics metrics = ShortcutLayoutCalculator.Calculate(availableWidth);
-        int columnSpan = ShortcutLayoutCalculator.ClampFolderColumnSpan(
-            icon.FolderColumnSpan_NoWrite,
-            columnCount);
-        int rowSpan = Math.Max(1, icon.FolderRowSpan_NoWrite);
+        // 文件夹已统一为 1x1；视觉模板也必须使用单格尺寸，否则标题会落到
+        // LauncherGridPanel 分配区域之外并被裁剪。
+        const int columnSpan = 1;
+        const int rowSpan = 1;
         ShortcutTileDisplaySize tileSize = ShortcutLayoutCalculator.CalculatePanelTileDisplaySize(
             metrics,
             columnSpan,
             rowSpan,
-            supportsVariableSizedItems: true);
+            supportsVariableSizedItems: supportsVariableSize);
 
+        // 统一按实际瓦片尺寸设置模板根，保证文件夹标题区域始终有布局空间；
+        // 不依赖 ResetTemplate 的“清除高度”路径，避免标题被挤出可视区域。
         templateRoot.Width = tileSize.Width;
         templateRoot.Height = tileSize.Height;
         if (MenuGeometryHelper.FindDescendantByName<Grid>(
@@ -53,22 +52,16 @@ public static class LauncherFolderTileVisualAdapter
             return;
         }
 
-        double topInset = GetShortcutIconStackTopInset(metrics.SlotHeight);
-        folderVisual.Width = GetBodyWidth(tileSize.Width, columnSpan);
-        folderVisual.Height = GetBodyHeight(metrics.SlotHeight, rowSpan, topInset);
-        folderVisual.Margin = new Thickness(0d, topInset, 0d, 0d);
+        folderVisual.Width = 48d;
+        folderVisual.Height = 48d;
+        folderVisual.Margin = new Thickness(0d, 13d, 0d, 0d);
         folderVisual.HorizontalAlignment = HorizontalAlignment.Center;
-        folderVisual.VerticalAlignment = VerticalAlignment.Center;
+        folderVisual.VerticalAlignment = VerticalAlignment.Top;
         ApplySurface(folderVisual, icon.FolderSize);
         ApplyPreview(folderVisual, icon);
     }
 
-    public static double GetPreviewIconSize(ShortcutFolderSize size) => size switch
-    {
-        ShortcutFolderSize.Large => 44d,
-        ShortcutFolderSize.Medium => 22d,
-        _ => 18d
-    };
+    public static double GetPreviewIconSize(ShortcutFolderSize size) => 14d;
 
     public static double GetBodyHeight(double slotHeight, int rowSpan) =>
         GetBodyHeight(slotHeight, rowSpan, topInset: 0d);
@@ -98,8 +91,7 @@ public static class LauncherFolderTileVisualAdapter
                 folderVisual,
                 "FolderVisualSurface") is Border surface)
         {
-            surface.CornerRadius = new CornerRadius(
-                size == ShortcutFolderSize.Small ? 18d : 28d);
+            surface.CornerRadius = new CornerRadius(12d);
         }
     }
 
@@ -113,19 +105,32 @@ public static class LauncherFolderTileVisualAdapter
         }
 
         double iconSize = GetPreviewIconSize(icon.FolderSize);
-        int itemCount = Math.Clamp(icon.FolderPreviewItems_NoWrite.Count, 1, 6);
+        int itemCount = Math.Clamp(icon.FolderPreviewItems_NoWrite.Count, 1, 2);
         int columnCount = itemCount <= 2 ? itemCount : 2;
         int rowCount = (int)Math.Ceiling(itemCount / (double)columnCount);
-        double itemSize = iconSize + PreviewIconGap;
+        double previewWidth = PreviewCellSize * columnCount
+            + PreviewIconGap * Math.Max(0, columnCount - 1);
+        double previewHeight = PreviewCellSize * rowCount
+            + PreviewIconGap * Math.Max(0, rowCount - 1);
 
-        previewItems.Margin = new Thickness(PreviewSafePadding);
-        previewItems.Width = itemSize * columnCount;
-        previewItems.Height = itemSize * rowCount;
+        previewItems.Margin = new Thickness(0d);
+        previewItems.Width = previewWidth;
+        previewItems.Height = previewHeight;
         previewItems.HorizontalAlignment = HorizontalAlignment.Center;
         previewItems.VerticalAlignment = VerticalAlignment.Center;
         previewItems.ColumnSpacing = columnCount > 1 ? PreviewIconGap : 0d;
         previewItems.RowSpacing = rowCount > 1 ? PreviewIconGap : 0d;
         SetGridTracks(previewItems, columnCount, rowCount);
+
+        for (int i = 0; i < 6; i++)
+        {
+            if (MenuGeometryHelper.FindDescendantByName<Border>(
+                    previewItems,
+                    $"FolderPreviewCell{i + 1}") is Border cell)
+            {
+                cell.Visibility = i < itemCount ? Visibility.Visible : Visibility.Collapsed;
+            }
+        }
 
         ForEachDescendant<Image>(previewItems, image =>
         {

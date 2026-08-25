@@ -8,16 +8,17 @@ internal static class LauncherShortcutGridItemAdapter
     public static LauncherGridItem Create(
         IconInfo icon,
         int columnCount,
-        bool preserveManualPosition = true)
+        bool preserveManualPosition = true,
+        bool uniformTiles = false)
     {
         ArgumentNullException.ThrowIfNull(icon);
         int safeColumnCount = Math.Max(1, columnCount);
-        int columnSpan = ShortcutLayoutCalculator.ClampFolderColumnSpan(
+        int columnSpan = uniformTiles ? 1 : ShortcutLayoutCalculator.ClampFolderColumnSpan(
             GetColumnSpan(icon),
             safeColumnCount);
-        int rowSpan = GetRowSpan(icon);
+        int rowSpan = uniformTiles ? 1 : GetRowSpan(icon);
 
-        return preserveManualPosition && icon.HasManualLauncherGridPosition_NoWrite
+        return !uniformTiles && preserveManualPosition && icon.HasManualLauncherGridPosition_NoWrite
             ? new LauncherGridItem(
                 icon,
                 columnSpan,

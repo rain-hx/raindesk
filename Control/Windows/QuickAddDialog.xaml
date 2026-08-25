@@ -72,7 +72,8 @@
                 Click="OnClearDate"
                 Padding="4"
                 Background="Transparent"
-                FontSize="12"/>
+                FontSize="12"
+                AutomationProperties.Name="清除日期"/>
         </StackPanel>
 
         <!-- 选中的优先级显示 -->
@@ -89,7 +90,8 @@
                 Click="OnClearPriority"
                 Padding="4"
                 Background="Transparent"
-                FontSize="12"/>
+                FontSize="12"
+                AutomationProperties.Name="清除优先级"/>
         </StackPanel>
 
         <!-- 日期选择器（展开时显示） -->

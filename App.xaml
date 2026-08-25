@@ -17,9 +17,11 @@
             <cvt:BGStyleConvert x:Key="BGStyleConvert"/>
             <cvt:Boolean2VisibilityConverter x:Key="MyBoolean2VisibilityConverter"/>
             <cvt:Boolean2VisibilityConverter x:Key="Boolean2VisibilityConverter"/>
+            <cvt:BooleanToVerticalAlignmentConverter x:Key="BooleanToVerticalAlignmentConverter"/>
             <cvt:EmptyStringToVisibilityConverter x:Key="EmptyStringToVisibilityConverter"/>
             <cvt:TextToColorConverter x:Key="TextToColorConverter"/>
             <cvt:StringToGeometryConverter x:Key="StringToGeometryConverter"/>
+            <cvt:StringPreviewConverter x:Key="StringPreviewConverter"/>
             <cvt:StringAppendConvert x:Key="StringAppendConvert"/>
             <cvt:Visibility2BooleanConverter x:Key="Visibility2BooleanConverter"/>
             <cvt:HideTypeConvert x:Key="HideTypeConvert"/>

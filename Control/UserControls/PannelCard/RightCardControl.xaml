@@ -13,6 +13,11 @@
              d:DesignHeight="450" d:DesignWidth="800"
              AllowDrop="True">
     <UserControl.Resources>
+        <ItemsPanelTemplate x:Key="AllGroupsShortcutPanelTemplate">
+            <ItemsWrapGrid Orientation="Horizontal"
+                           HorizontalAlignment="Stretch"
+                           VerticalAlignment="Top"/>
+        </ItemsPanelTemplate>
         <Style x:Key="ImageStyle" TargetType="Image">
             <Setter Property="Stretch" Value="Uniform"/>
         </Style>
@@ -74,14 +79,15 @@
             <Setter Property="Padding" Value="0"/>
             <Setter Property="Margin" Value="0,0,0,4"/>
             <Setter Property="MinWidth" Value="0"/>
-            <Setter Property="MinHeight" Value="44"/>
-            <Setter Property="MaxHeight" Value="56"/>
+            <Setter Property="MinHeight" Value="40"/>
+            <Setter Property="MaxHeight" Value="44"/>
             <Setter Property="Width" Value="Auto"/>
             <Setter Property="Height" Value="Auto"/>
             <Setter Property="Background" Value="Transparent"/>
             <Setter Property="BorderThickness" Value="0"/>
             <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
             <Setter Property="VerticalContentAlignment" Value="Center"/>
+            <Setter Property="HorizontalAlignment" Value="Left"/>
             <Setter Property="VerticalAlignment" Value="Center"/>
             <Setter Property="UseSystemFocusVisuals" Value="False"/>
             <Setter Property="IsTabStop" Value="False"/>
@@ -93,9 +99,9 @@
                                 BorderBrush="Transparent"
                                 BorderThickness="0"
                                 CornerRadius="8"
-                                Padding="10,8"
-                                MinHeight="44"
-                                MaxHeight="56">
+                                Padding="8,4"
+                                MinHeight="40"
+                                MaxHeight="44">
                             <ContentPresenter HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"
                                               VerticalAlignment="{TemplateBinding VerticalContentAlignment}"/>
                         </Border>
@@ -104,15 +110,25 @@
             </Setter>
         </Style>
         <ItemsPanelTemplate x:Key="GroupTabRowPanel">
-            <ItemsStackPanel Orientation="Vertical" VerticalAlignment="Top"/>
+            <ItemsStackPanel Orientation="Vertical"
+                             HorizontalAlignment="Left"
+                             VerticalAlignment="Top"/>
         </ItemsPanelTemplate>
         <DataTemplate x:Key="GroupTabItemDataTemplate" x:DataType="vm:MenuInfo">
-            <Grid Height="56"
+            <Grid Height="44"
                   HorizontalAlignment="Left"
                   VerticalAlignment="Center">
-                <Grid HorizontalAlignment="Left"
+                <Border Background="{ThemeResource AccentLightBrush}"
+                        CornerRadius="8"
+                        HorizontalAlignment="Stretch"
+                        VerticalAlignment="Stretch"
+                        Opacity="{x:Bind SelectionIndicatorOpacity_NoWrite, Mode=OneWay}"
+                        IsHitTestVisible="False"/>
+                <Grid x:Name="GroupTabContentHost"
+                      HorizontalAlignment="Left"
                       VerticalAlignment="Center"
-                          MinHeight="42">
+                      MinHeight="36"
+                      Margin="6,0">
                     <Grid Visibility="{x:Bind NotMenuEdit, Mode=OneWay}"
                           HorizontalAlignment="Left"
                           VerticalAlignment="Center"
@@ -120,10 +136,11 @@
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="Auto"/>
                             <ColumnDefinition Width="Auto"/>
+                            <ColumnDefinition Width="Auto"/>
                         </Grid.ColumnDefinitions>
                         <Viewbox Grid.Column="0"
-                                 Width="20"
-                                 Height="20"
+                                 Width="16"
+                                 Height="16"
                                  VerticalAlignment="Center"
                                  HorizontalAlignment="Center">
                             <Path x:Name="GroupTabIconPath"
@@ -132,23 +149,45 @@
                         </Viewbox>
                         <TextBlock x:Name="GroupTabLabel"
                                    Grid.Column="1"
-                                   Text="{x:Bind MenuName, Mode=OneWay}"
-                                   FontSize="18"
+                                   Text="{x:Bind MenuName, Mode=OneWay, Converter={StaticResource StringPreviewConverter}, ConverterParameter=5}"
+                                   FontSize="15"
                                    FontWeight="SemiBold"
-                                   LineHeight="22"
+                                   LineHeight="19"
                                    LineStackingStrategy="BlockLineHeight"
                                    Foreground="{x:Bind GroupTabLabelBrush_NoWrite, Mode=OneWay}"
                                    HorizontalAlignment="Left"
                                    VerticalAlignment="Center"
+                                   MaxWidth="76"
                                    TextWrapping="NoWrap"/>
+                        <Button x:Name="InlineGroupBarToggleButton"
+                                Grid.Column="2"
+                                Width="32"
+                                Height="32"
+                                MinWidth="32"
+                                MinHeight="32"
+                                Margin="6,0,0,0"
+                                Padding="0"
+                                Background="Transparent"
+                                BorderThickness="0"
+                                CornerRadius="7"
+                                Visibility="Collapsed"
+                                Click="ToggleGroupBarClick"
+                                AutomationProperties.Name="收起分组名称"
+                                ToolTipService.ToolTip="收起分组名称">
+                            <FontIcon x:Name="InlineGroupBarToggleIcon"
+                                      Glyph="&#xE76B;"
+                                      FontFamily="{StaticResource FluentIconFont}"
+                                      FontSize="15"
+                                      Foreground="{ThemeResource AppForegroundBrush}"/>
+                        </Button>
                     </Grid>
-                    <Grid Width="128"
+                    <Grid Width="88"
                           Height="36"
                           HorizontalAlignment="Center"
                           VerticalAlignment="Center"
                           Visibility="{x:Bind MenuEdit, Mode=OneWay}">
                         <TextBox Style="{StaticResource GroupTabInlineEditStyle}"
-                                 Width="128"
+                                 Width="88"
                                  Height="36"
                                  Opacity="0"
                                  Canvas.ZIndex="0"
@@ -158,12 +197,16 @@
                                  LostFocus="GroupEditLostFocusOrEnterDown"
                                  KeyDown="GroupEditKeyDown"/>
                         <TextBlock x:Name="InlineEditMirror"
-                                   Text="{x:Bind MenuName, Mode=OneWay}"
+                                   Text="{x:Bind MenuName, Mode=OneWay, Converter={StaticResource StringPreviewConverter}, ConverterParameter=5}"
                                    IsHitTestVisible="False"
                                    HorizontalAlignment="Center"
                                    VerticalAlignment="Center"
-                                   FontSize="18"
+                                   TextAlignment="Center"
+                                   FontSize="15"
                                    FontWeight="SemiBold"
+                                   Width="76"
+                                   MaxLines="1"
+                                   TextWrapping="NoWrap"
                                    Foreground="{ThemeResource AppForegroundBrush}"
                                    Visibility="{x:Bind MenuEdit, Mode=OneWay}"
                                    Canvas.ZIndex="1"/>
@@ -296,8 +339,8 @@
                 DragOver="WrapCard_DragOver"
                 Drop="Wrap_Drop"
                 Background="{ThemeResource LauncherShellBackgroundBrush}"
-                BorderBrush="{ThemeResource LauncherShellBorderBrush}"
-                BorderThickness="1"
+                BorderBrush="Transparent"
+                BorderThickness="0"
                 CornerRadius="28"
                 RightTapped="WrapCard_RightTapped"
                 PointerWheelChanged="IconListView_PointerWheelChanged">
@@ -313,6 +356,19 @@
                             <FontIcon Glyph="&#xE8B7;"/>
                         </MenuFlyoutItem.Icon>
                     </MenuFlyoutItem>
+                    <MenuFlyoutSubItem Text="界面设置" Style="{StaticResource raindeskMenuFlyoutSubItemStyle}">
+                        <MenuFlyoutSubItem.Icon>
+                            <FontIcon Glyph="&#xE713;"/>
+                        </MenuFlyoutSubItem.Icon>
+                        <MenuFlyoutItem x:Name="TopBarVisibilityMenuItem"
+                                         Text="展开顶部栏"
+                                         Click="ToggleTopBarFromIconMenu"
+                                         Style="{StaticResource raindeskMenuFlyoutItemStyle}"/>
+                        <MenuFlyoutItem x:Name="GroupBarVisibilityMenuItem"
+                                         Text="展开分组栏"
+                                         Click="ToggleGroupBarFromIconMenu"
+                                         Style="{StaticResource raindeskMenuFlyoutItemStyle}"/>
+                    </MenuFlyoutSubItem>
                     <MenuFlyoutSeparator/>
                     <MenuFlyoutItem x:Name="CardLockCM" Text="锁定主面板" Click="LockAppPanel" Style="{StaticResource raindeskMenuFlyoutItemStyle}">
                         <MenuFlyoutItem.Icon>
@@ -332,7 +388,7 @@
                 </MenuFlyout>
             </Border.ContextFlyout>
 
-            <Grid Padding="30,12,36,26">
+            <Grid Padding="30,12,8,8">
                 <Grid.RowDefinitions>
                     <RowDefinition x:Name="TitleRow" Height="0"/>
                     <RowDefinition Height="*"/>
@@ -373,8 +429,14 @@
                 <Grid x:Name="GroupBarHost"
                       Grid.Row="1"
                       Grid.Column="0"
-                      Margin="0,0,8,0"
+                      Margin="-22,0,10,0"
+                      Background="Transparent"
                       VerticalAlignment="Stretch">
+                <Border Width="1"
+                        Margin="0,-12,2,-26"
+                        HorizontalAlignment="Right"
+                        Background="Transparent"
+                        IsHitTestVisible="False"/>
                 <Grid x:Name="GroupBar"
                       AllowDrop="True"
                       DragOver="GroupBar_IconDragOver"
@@ -451,34 +513,39 @@
                                     HorizontalAlignment="Left"
                                     Width="4"
                                     Background="{x:Null}">
-                                <Border x:Name="GroupTabSelectionIndicator"
-                                        Width="4"
-                                        Canvas.Left="0"
-                                        CornerRadius="2"
-                                        Background="{ThemeResource raindeskBlueBrush}"
-                                        Visibility="Collapsed"
-                                        IsHitTestVisible="False"/>
+                                <Grid x:Name="GroupTabSelectionIndicator"
+                                      Width="4"
+                                      Canvas.Left="0"
+                                      Visibility="Collapsed"
+                                      IsHitTestVisible="False">
+                                    <Border x:Name="GroupTabSelectionIndicatorMark"
+                                            Width="4"
+                                            Height="36"
+                                            CornerRadius="2"
+                                            VerticalAlignment="Center"
+                                            Background="{ThemeResource raindeskBlueBrush}"/>
+                                </Grid>
                             </Canvas>
                         </Grid>
                     </ScrollViewer>
                     <Button x:Name="CreateGroupButton"
                                 Grid.Row="1"
-                                Width="44"
-                                Height="44"
-                                MinWidth="44"
-                                MinHeight="44"
+                                Width="48"
+                                Height="40"
+                                MinWidth="48"
+                                MinHeight="40"
                                 Padding="0"
+                                HorizontalAlignment="Left"
                                 Margin="0"
-                                HorizontalAlignment="Center"
                                 Background="Transparent"
                                 BorderThickness="0"
-                                CornerRadius="12"
+                                CornerRadius="10"
                                 Click="CreateGroupClick"
                                 AutomationProperties.Name="新建分组"
                                 ToolTipService.ToolTip="创建新的快捷方式分组">
                             <FontIcon Glyph="&#xE710;"
                                       FontFamily="{StaticResource FluentIconFont}"
-                                      FontSize="18"
+                                      FontSize="16"
                                       Foreground="{ThemeResource raindeskBlueBrush}"/>
                     </Button>
                 </Grid>
@@ -576,7 +643,7 @@
                                                             Width="64"
                                                             Height="64"
                                                             CornerRadius="18"
-                                                            Background="{ThemeResource LauncherIconSurfaceBrush}"
+                                                            Background="Transparent"
                                                             BorderBrush="{ThemeResource LauncherMutedBorderBrush}"
                                                             BorderThickness="0"
                                                             HorizontalAlignment="Center"
@@ -590,7 +657,7 @@
                                                             Padding="0"
                                                             HorizontalAlignment="Center"
                                                             VerticalAlignment="Center">
-                                                        <Image Source="{x:Bind BitmapImage_NoWrite, Mode=OneWay}"
+                                                        <Image Source="{x:Bind BitmapImageCached_NoWrite, Mode=OneWay}"
                                                                Stretch="Uniform"
                                                                Width="48"
                                                                Height="48"
@@ -633,7 +700,7 @@
                                                            HorizontalAlignment="Center"
                                                            Padding="4,0"
                                                            Foreground="{Binding DataContext.AppConfig.TextColor, ElementName=RootGrid, Converter={StaticResource TextToColorConverter}}"
-                                                           Visibility="{Binding AppConfig.ShowIconTitle, ElementName=RootControl, Converter={StaticResource MyBoolean2VisibilityConverter}, Mode=OneWay}"
+                                                           Visibility="{Binding AppConfig.ShowShortcutTitle, ElementName=RootControl, Converter={StaticResource MyBoolean2VisibilityConverter}, Mode=OneWay}"
                                                            Text="{x:Bind Name, Mode=OneWay}"/>
                                             </StackPanel>
                                         </Grid>
@@ -679,27 +746,31 @@
                                             </StackPanel>
                                         </Grid>
                                         <Grid Visibility="{x:Bind IsFolder, Converter={StaticResource MyBoolean2VisibilityConverter}, Mode=OneWay}"
+                                              Width="104"
+                                              Height="104"
                                               HorizontalAlignment="Center"
-                                              VerticalAlignment="Top"
+                                              VerticalAlignment="Center"
                                               AutomationProperties.Name="{x:Bind Name, Mode=OneWay}"
                                               AutomationProperties.HelpText="{x:Bind Content, Mode=OneWay}">
-                                            <StackPanel HorizontalAlignment="Center"
-                                                        VerticalAlignment="Top"
-                                                        Spacing="8">
+                                            <Grid Width="104"
+                                                  Height="104"
+                                                  HorizontalAlignment="Center"
+                                                  VerticalAlignment="Center">
                                                 <Grid x:Name="FolderVisualRoot"
-                                                      Width="64"
-                                                      Height="64"
+                                                      Width="48"
+                                                      Height="48"
+                                                      Margin="0,13,0,0"
                                                       HorizontalAlignment="Center"
+                                                      VerticalAlignment="Top"
                                                       ToolTipService.ToolTip="{x:Bind Content, Mode=OneWay}">
                                                     <Border x:Name="FolderVisualSurface"
-                                                            Background="{ThemeResource LauncherIconSurfaceBrush}"
-                                                            BorderBrush="{ThemeResource LauncherMutedBorderBrush}"
+                                                            Background="{ThemeResource LauncherFolderTileBrush}"
                                                             BorderThickness="0"
-                                                            CornerRadius="18"/>
+                                                            CornerRadius="12"/>
                                                     <Grid x:Name="FolderPreviewItems"
-                                                          Width="48"
-                                                          Height="48"
-                                                          Margin="6"
+                                                          Width="36"
+                                                          Height="16"
+                                                          Margin="0"
                                                           ColumnSpacing="4"
                                                           RowSpacing="4"
                                                           HorizontalAlignment="Center"
@@ -711,15 +782,15 @@
                                                         </Grid.ColumnDefinitions>
                                                         <Grid.RowDefinitions>
                                                             <RowDefinition Height="*"/>
-                                                            <RowDefinition Height="*"/>
-                                                            <RowDefinition Height="*"/>
+                                                            <RowDefinition Height="0"/>
+                                                            <RowDefinition Height="0"/>
                                                         </Grid.RowDefinitions>
-                                                        <Image x:Name="FolderPreviewImage1" Grid.Row="0" Grid.Column="0" Source="{x:Bind FolderPreviewImage1_NoWrite, Mode=OneWay}" Stretch="Uniform" Width="15" Height="15" HorizontalAlignment="Center" VerticalAlignment="Center"/>
-                                                        <Image x:Name="FolderPreviewImage2" Grid.Row="0" Grid.Column="1" Source="{x:Bind FolderPreviewImage2_NoWrite, Mode=OneWay}" Stretch="Uniform" Width="15" Height="15" HorizontalAlignment="Center" VerticalAlignment="Center"/>
-                                                        <Image x:Name="FolderPreviewImage3" Grid.Row="1" Grid.Column="0" Source="{x:Bind FolderPreviewImage3_NoWrite, Mode=OneWay}" Stretch="Uniform" Width="15" Height="15" HorizontalAlignment="Center" VerticalAlignment="Center"/>
-                                                        <Image x:Name="FolderPreviewImage4" Grid.Row="1" Grid.Column="1" Source="{x:Bind FolderPreviewImage4_NoWrite, Mode=OneWay}" Stretch="Uniform" Width="15" Height="15" HorizontalAlignment="Center" VerticalAlignment="Center"/>
-                                                        <Image x:Name="FolderPreviewImage5" Grid.Row="2" Grid.Column="0" Source="{x:Bind FolderPreviewImage5_NoWrite, Mode=OneWay}" Stretch="Uniform" Width="15" Height="15" HorizontalAlignment="Center" VerticalAlignment="Center"/>
-                                                        <Image x:Name="FolderPreviewImage6" Grid.Row="2" Grid.Column="1" Source="{x:Bind FolderPreviewImage6_NoWrite, Mode=OneWay}" Stretch="Uniform" Width="15" Height="15" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                                        <Border x:Name="FolderPreviewCell1" Grid.Row="0" Grid.Column="0" Width="16" Height="16" Padding="1" CornerRadius="4" Background="{ThemeResource LauncherFolderPreviewCellBrush}"><Image x:Name="FolderPreviewImage1" Source="{x:Bind FolderPreviewImage1_NoWrite, Mode=OneWay}" Stretch="Uniform" HorizontalAlignment="Stretch" VerticalAlignment="Stretch"/></Border>
+                                                        <Border x:Name="FolderPreviewCell2" Grid.Row="0" Grid.Column="1" Width="16" Height="16" Padding="1" CornerRadius="4" Background="{ThemeResource LauncherFolderPreviewCellBrush}"><Image x:Name="FolderPreviewImage2" Source="{x:Bind FolderPreviewImage2_NoWrite, Mode=OneWay}" Stretch="Uniform" HorizontalAlignment="Stretch" VerticalAlignment="Stretch"/></Border>
+                                                        <Border x:Name="FolderPreviewCell3" Visibility="Collapsed" Grid.Row="1" Grid.Column="0" Width="16" Height="16" Padding="1" CornerRadius="4" Background="{ThemeResource LauncherFolderPreviewCellBrush}"><Image x:Name="FolderPreviewImage3" Source="{x:Bind FolderPreviewImage3_NoWrite, Mode=OneWay}" Stretch="Uniform" HorizontalAlignment="Stretch" VerticalAlignment="Stretch"/></Border>
+                                                        <Border x:Name="FolderPreviewCell4" Visibility="Collapsed" Grid.Row="1" Grid.Column="1" Width="16" Height="16" Padding="1" CornerRadius="4" Background="{ThemeResource LauncherFolderPreviewCellBrush}"><Image x:Name="FolderPreviewImage4" Source="{x:Bind FolderPreviewImage4_NoWrite, Mode=OneWay}" Stretch="Uniform" HorizontalAlignment="Stretch" VerticalAlignment="Stretch"/></Border>
+                                                        <Border x:Name="FolderPreviewCell5" Visibility="Collapsed" Grid.Row="2" Grid.Column="0" Width="16" Height="16" Padding="1" CornerRadius="4" Background="{ThemeResource LauncherFolderPreviewCellBrush}"><Image x:Name="FolderPreviewImage5" Source="{x:Bind FolderPreviewImage5_NoWrite, Mode=OneWay}" Stretch="Uniform" HorizontalAlignment="Stretch" VerticalAlignment="Stretch"/></Border>
+                                                        <Border x:Name="FolderPreviewCell6" Visibility="Collapsed" Grid.Row="2" Grid.Column="1" Width="16" Height="16" Padding="1" CornerRadius="4" Background="{ThemeResource LauncherFolderPreviewCellBrush}"><Image x:Name="FolderPreviewImage6" Source="{x:Bind FolderPreviewImage6_NoWrite, Mode=OneWay}" Stretch="Uniform" HorizontalAlignment="Stretch" VerticalAlignment="Stretch"/></Border>
                                                     </Grid>
                                                     <Border MinWidth="22"
                                                             Height="22"
@@ -739,21 +810,23 @@
                                                                    VerticalAlignment="Center"/>
                                                     </Border>
                                                 </Grid>
-                                                <TextBlock Width="{Binding ActualWidth, ElementName=ShortcutTemplateRoot, Mode=OneWay}"
+                                                <TextBlock Width="104"
                                                            Height="22"
                                                            MaxLines="1"
                                                            FontSize="13"
-                                                           FontWeight="Normal"
+                                                           FontWeight="SemiBold"
                                                            TextWrapping="NoWrap"
                                                            TextTrimming="CharacterEllipsis"
                                                            TextAlignment="Center"
-                                                           VerticalAlignment="Center"
+                                                           VerticalAlignment="Bottom"
                                                            HorizontalAlignment="Center"
+                                                           Margin="0,0,0,5"
                                                            Padding="4,0"
-                                                           Foreground="{Binding DataContext.AppConfig.TextColor, ElementName=RootGrid, Converter={StaticResource TextToColorConverter}}"
-                                                           Visibility="{Binding AppConfig.ShowIconTitle, ElementName=RootControl, Converter={StaticResource MyBoolean2VisibilityConverter}, Mode=OneWay}"
-                                                           Text="{x:Bind Name, Mode=OneWay}"/>
-                                            </StackPanel>
+                                                           Foreground="{ThemeResource AppForegroundBrush}"
+                                                           Visibility="Visible"
+                                                           Canvas.ZIndex="20"
+                                                           Text="{x:Bind Name_NoWrite, Mode=OneWay}"/>
+                                            </Grid>
                                         </Grid>
                                     </Grid>
                                 </DataTemplate>
@@ -791,7 +864,12 @@
                             <RowDefinition Height="*"/>
                         </Grid.RowDefinitions>
 
-                        <Grid ColumnSpacing="20">
+                        <Border Padding="12"
+                                Background="{ThemeResource ControlFillBrush}"
+                                BorderBrush="{ThemeResource ControlBorderBrush}"
+                                BorderThickness="1"
+                                CornerRadius="14">
+                        <Grid ColumnSpacing="16">
                             <Grid.ColumnDefinitions>
                                 <ColumnDefinition Width="*"/>
                                 <ColumnDefinition Width="Auto"/>
@@ -814,7 +892,7 @@
                                     BorderBrush="{ThemeResource ControlBorderBrush}"
                                     BorderThickness="1"
                                     CornerRadius="10"
-                                    Background="{ThemeResource ControlFillBrush}"
+                                    Background="{ThemeResource AppBackgroundBrush}"
                                     Padding="12,0"
                                     MinWidth="240"
                                     MaxWidth="360"
@@ -847,9 +925,18 @@
                                 </Grid>
                             </Border>
                         </Grid>
+                        </Border>
 
-                        <Grid Grid.Row="1">
-                            <si:SystemItem x:Name="InlineSystemItems"/>
+                        <Border Grid.Row="1"
+                                Padding="12"
+                                Background="{ThemeResource ControlFillBrush}"
+                                BorderBrush="{ThemeResource ControlBorderBrush}"
+                                BorderThickness="1"
+                                CornerRadius="14">
+                        <Grid>
+                            <si:SystemItem x:Name="InlineSystemItems"
+                                           HorizontalAlignment="Stretch"
+                                           VerticalAlignment="Stretch"/>
                             <ProgressRing x:Name="InlineSystemLoading"
                                           Width="54"
                                           Height="54"
@@ -859,6 +946,7 @@
                                           VerticalAlignment="Center"
                                           Foreground="{ThemeResource raindeskBlueBrush}"/>
                         </Grid>
+                        </Border>
                     </Grid>
                 </Grid>
             </Grid>
@@ -876,37 +964,45 @@
             </Grid>
         </Border>
 
+        <Popup x:Name="FolderPopup"
+               IsOpen="{x:Bind FolderOverlayViewModel.IsOpen, Mode=OneWay}"
+               IsLightDismissEnabled="True"
+               ShouldConstrainToRootBounds="False"
+               Closed="FolderPopup_Closed">
         <Grid x:Name="FolderOverlay"
-              Visibility="{x:Bind FolderOverlayViewModel.IsOpen, Converter={StaticResource MyBoolean2VisibilityConverter}, Mode=OneWay}"
               Background="Transparent"
-              HorizontalAlignment="Stretch"
-              VerticalAlignment="Stretch"
-              Canvas.ZIndex="20"
               AllowDrop="True"
-              DragOver="FolderOverlay_DragOver"
-              Tapped="FolderOverlay_BackdropTapped">
+              DragOver="FolderOverlay_DragOver">
+            <Grid x:Name="FolderOverlayBubbleHost"
+                  HorizontalAlignment="Left"
+                  VerticalAlignment="Top">
+                <Path Data="M 12,0 L 0,12 L 12,24 Z"
+                      Width="12"
+                      Height="24"
+                      Stretch="Fill"
+                      Fill="{ThemeResource LauncherFolderBubbleBackgroundBrush}"
+                      HorizontalAlignment="Left"
+                      VerticalAlignment="Center"
+                      IsHitTestVisible="False"/>
             <Border x:Name="FolderOverlayPanel"
                     Width="Auto"
-                    MinWidth="260"
-                    MaxWidth="520"
-                    MinHeight="320"
-                    MaxHeight="460"
-                    CornerRadius="28"
-                    Background="{ThemeResource LauncherFolderPanelBackgroundBrush}"
-                    BorderBrush="{ThemeResource LauncherMutedBorderBrush}"
-                    BorderThickness="1"
-                    HorizontalAlignment="Center"
-                    VerticalAlignment="Center"
-                    Padding="28"
+                    MinWidth="420"
+                    MaxWidth="620"
+                    MinHeight="190"
+                    MaxHeight="360"
+                    Margin="11,0,0,0"
+                    CornerRadius="24"
+                    Background="{ThemeResource LauncherFolderBubbleBackgroundBrush}"
+                    BorderThickness="0"
+                    Padding="24,20"
                     Tapped="FolderOverlayPanel_Tapped">
-                <Grid RowSpacing="18">
+                <Grid RowSpacing="12">
                     <Grid.RowDefinitions>
                         <RowDefinition Height="Auto"/>
                         <RowDefinition Height="*"/>
                     </Grid.RowDefinitions>
-                    <Grid ColumnSpacing="12">
+                    <Grid>
                         <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="Auto"/>
                             <ColumnDefinition Width="Auto"/>
                             <ColumnDefinition Width="*"/>
                             <ColumnDefinition Width="Auto"/>
@@ -923,22 +1019,18 @@
                                 AutomationProperties.Name="返回上一级文件夹"
                                 AutomationProperties.AutomationId="FolderBackButton"
                                 ToolTipService.ToolTip="返回上一级">
-                            <FontIcon Glyph="&#xE72B;" FontFamily="{StaticResource FluentIconFont}" FontSize="16"/>
+                            <FontIcon Glyph="&#xE72B;" FontFamily="{StaticResource FluentIconFont}" FontSize="16" Foreground="{ThemeResource LauncherFolderBubbleTextBrush}"/>
                         </Button>
-                        <FontIcon Grid.Column="1"
-                                  Glyph="&#xE8B7;"
-                                  FontFamily="{StaticResource FluentIconFont}"
-                                  FontSize="20"
-                                  Foreground="{ThemeResource SecondaryTextBrush}"
-                                  VerticalAlignment="Center"/>
                         <TextBlock x:Name="FolderOverlayTitle"
-                                   Grid.Column="2"
+                                   Grid.Column="1"
                                    Text="{x:Bind FolderOverlayViewModel.Title, Mode=OneWay}"
-                                   FontSize="20"
-                                   FontWeight="SemiBold"
-                                   Foreground="{ThemeResource AppForegroundBrush}"
+                                   FontSize="17"
+                                   FontWeight="Bold"
+                                   Foreground="{ThemeResource LauncherFolderBubbleTextBrush}"
+                                   TextAlignment="Center"
+                                   HorizontalAlignment="Center"
                                    VerticalAlignment="Center"/>
-                        <Button Grid.Column="3"
+                        <Button Grid.Column="2"
                                 Click="CloseFolderOverlayClick"
                                 MinWidth="44"
                                 MinHeight="44"
@@ -948,7 +1040,7 @@
                                 AutomationProperties.Name="关闭文件夹"
                                 AutomationProperties.AutomationId="CloseFolderButton"
                                 ToolTipService.ToolTip="关闭文件夹">
-                            <FontIcon Glyph="&#xE711;" FontFamily="{StaticResource FluentIconFont}" FontSize="14"/>
+                            <FontIcon Glyph="&#xE711;" FontFamily="{StaticResource FluentIconFont}" FontSize="14" Foreground="{ThemeResource LauncherFolderBubbleTextBrush}"/>
                         </Button>
                     </Grid>
                     <ListView x:Name="FolderItemsListView"
@@ -977,14 +1069,14 @@
                                 <ItemsWrapGrid HorizontalAlignment="Stretch"
                                                VerticalAlignment="Top"
                                                Orientation="Horizontal"
-                                               ItemWidth="104"
-                                               ItemHeight="108"/>
+                                               ItemWidth="120"
+                                               ItemHeight="104"/>
                             </ItemsPanelTemplate>
                         </ListView.ItemsPanel>
                         <ListView.ItemTemplate>
                             <DataTemplate x:DataType="vm:IconInfo">
-                                <StackPanel Width="104"
-                                            Height="108"
+                                <StackPanel Width="120"
+                                            Height="104"
                                             HorizontalAlignment="Center"
                                             VerticalAlignment="Center"
                                             Spacing="8">
@@ -1016,13 +1108,12 @@
                                             </MenuFlyoutSubItem>
                                         </MenuFlyout>
                                     </StackPanel.ContextFlyout>
-                                    <Grid Width="64"
-                                          Height="64"
+                                    <Grid Width="56"
+                                          Height="56"
                                           HorizontalAlignment="Center">
-                                        <Border Background="{ThemeResource LauncherIconSurfaceBrush}"
-                                                BorderBrush="{ThemeResource LauncherMutedBorderBrush}"
+                                        <Border Background="{ThemeResource LauncherFolderPreviewCellBrush}"
                                                 BorderThickness="0"
-                                                CornerRadius="18"/>
+                                                CornerRadius="14"/>
                                         <Image Source="{x:Bind BitmapImage_NoWrite, Mode=OneWay}"
                                                Width="48"
                                                Height="48"
@@ -1036,14 +1127,18 @@
                                                MaxLines="1"
                                                TextTrimming="CharacterEllipsis"
                                                TextAlignment="Center"
-                                               Foreground="{ThemeResource AppForegroundBrush}"/>
+                                               FontWeight="SemiBold"
+                                               Foreground="{ThemeResource LauncherFolderBubbleTextBrush}"
+                                               Visibility="Visible"/>
                                 </StackPanel>
                             </DataTemplate>
                         </ListView.ItemTemplate>
                     </ListView>
                 </Grid>
             </Border>
+            </Grid>
         </Grid>
+        </Popup>
 
         <ProgressRing x:Name="Loading_RightCard"
                       Width="45"

@@ -125,13 +125,13 @@ public sealed class TrayService : ITrayController
         const int restartApp = 5;
         const int exitApp = 6;
 
-        NativeWindowMethods.AppendMenu(menu, MF_STRING, (UIntPtr)openPanel, L10n.Get("Tray_OpenPanel"));
-        NativeWindowMethods.AppendMenu(menu, MF_STRING, (UIntPtr)exportBackup, L10n.Get("Tray_ExportBackup"));
-        NativeWindowMethods.AppendMenu(menu, MF_STRING, (UIntPtr)importBackup, L10n.Get("Tray_ImportBackup"));
+        NativeWindowMethods.AppendMenu(menu, MF_STRING, (UIntPtr)openPanel, "打开面板");
+        NativeWindowMethods.AppendMenu(menu, MF_STRING, (UIntPtr)exportBackup, "备份数据");
+        NativeWindowMethods.AppendMenu(menu, MF_STRING, (UIntPtr)importBackup, "导入备份");
         NativeWindowMethods.AppendMenu(menu, MF_SEPARATOR, UIntPtr.Zero, null);
-        NativeWindowMethods.AppendMenu(menu, MF_STRING, (UIntPtr)openAppDir, L10n.Get("Tray_OpenAppDir"));
-        NativeWindowMethods.AppendMenu(menu, MF_STRING, (UIntPtr)restartApp, L10n.Get("Tray_RestartApp"));
-        NativeWindowMethods.AppendMenu(menu, MF_STRING, (UIntPtr)exitApp, L10n.Get("Tray_ExitApp"));
+        NativeWindowMethods.AppendMenu(menu, MF_STRING, (UIntPtr)openAppDir, "程序目录");
+        NativeWindowMethods.AppendMenu(menu, MF_STRING, (UIntPtr)restartApp, "重启应用");
+        NativeWindowMethods.AppendMenu(menu, MF_STRING, (UIntPtr)exitApp, "退出应用");
 
         // 使用主窗口 HWND；MainWindow 未注册到 DI，需通过静态实例获取
         var window = MainWindow.mainWindow;

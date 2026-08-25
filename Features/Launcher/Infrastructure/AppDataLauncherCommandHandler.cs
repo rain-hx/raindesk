@@ -723,8 +723,9 @@ public sealed class AppDataLauncherCommandHandler : ILauncherCommandHandler
             return null;
         }
 
-        return ShortcutFolderTreeService.EnumerateIcons(data.MenuList).FirstOrDefault(icon =>
-            string.Equals(icon.IconId, id, StringComparison.Ordinal));
+        return EnumerateIconTree(data.AppConfig.AllGroupsIconList)
+            .Concat(ShortcutFolderTreeService.EnumerateIcons(data.MenuList))
+            .FirstOrDefault(icon => string.Equals(icon.IconId, id, StringComparison.Ordinal));
     }
 
     private static IconInfo? FindLayoutIcon(AppData data, string id) =>

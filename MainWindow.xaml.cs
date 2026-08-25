@@ -151,9 +151,11 @@ namespace raindesk
                 };
                 PageCloseButton.SizeChanged += (s, e) => UpdateTitleBarRegions();
                 TopSettingsButton.SizeChanged += (s, e) => UpdateTitleBarRegions();
+                TopBarToggleButton.SizeChanged += (s, e) => UpdateTitleBarRegions();
                 BGSettingUtil.BGSetting();
                 ObserveAppConfig(appData.AppConfig);
                 ApplyGlassBackdrop();
+                ApplyTopBarCollapsedState(appData.AppConfig.TopBarCollapsed, animate: false);
                 InstallWindowMessageHook();
                 this.AppWindow.Closing += (s, e) =>
                 {
@@ -199,9 +201,6 @@ namespace raindesk
                 try { Task.BakTask.Start(); } catch (Exception ex) { LogUtil.WriteErrorLog(ex, "启动备份任务失败"); }
                 try { Task.UpdateTask.Start(); } catch (Exception ex) { LogUtil.WriteErrorLog(ex, "启动更新任务失败"); }
 
-                // 检查是否需要显示首次使用引导
-                _ = CheckAndShowOnboardingAsync();
-
                 DevDiagnosticService.Start(DispatcherQueue);
 
                 LogUtil.WriteLog("MainWindow ctor complete");
@@ -227,6 +226,7 @@ namespace raindesk
             ThemeService.SetMode(replacement.AppConfig.AppThemeMode);
             ApplySearchBoxVisibility();
             ApplyGlassBackdrop();
+            ApplyTopBarCollapsedState(replacement.AppConfig.TopBarCollapsed, animate: false);
             RefreshTrayIcon();
         }
 
@@ -361,10 +361,17 @@ namespace raindesk
             UpdateSearchPlaceholderVisibility();
             ApplySearchBoxVisibility();
 
+            // 初次加载时 XamlRoot 才可用；ConfigureWindowChrome 里提前调用会因
+            // XamlRoot 为 null 而跳过标题栏区域注册，导致顶部栏无法拖动窗口。
+            // 这里确保 Caption/Passthrough 区域按折叠后的实际布局注册。
+            UpdateTitleBarRegions();
+            DispatcherQueue.TryEnqueue(Microsoft.UI.Dispatching.DispatcherQueuePriority.Normal, UpdateTitleBarRegions);
+
             if (SearchBox != null && SearchInputMirror != null && SearchCaretBlinker != null)
             {
                 BlinkingCaretOverlay.Attach(SearchBox, SearchInputMirror, SearchCaretBlinker, DispatcherQueue);
             }
+
         }
 
         private void MainWindow_Activated(object sender, WindowActivatedEventArgs args)
@@ -385,6 +392,10 @@ namespace raindesk
             else
             {
                 CancelScheduledLostFocusHide();
+                // 初次激活时布局已稳定，补注册标题栏区域，
+                // 避免构造阶段 XamlRoot 未就绪导致顶部栏无法拖动窗口。
+                UpdateTitleBarRegions();
+                DispatcherQueue.TryEnqueue(Microsoft.UI.Dispatching.DispatcherQueuePriority.Normal, UpdateTitleBarRegions);
             }
         }
 
@@ -714,6 +725,17 @@ namespace raindesk
                 return;
             }
 
+            // 顶部栏折叠时搜索框属于折叠隐藏内容，不应显示；
+            // 否则折叠态顶部会出现可交互的 TextBox（Passthrough），
+            // 鼠标悬停显示 I-beam 且该区域无法拖动窗口。
+            if (appData?.AppConfig?.TopBarCollapsed == true)
+            {
+                SearchBoxHost.Visibility = Visibility.Collapsed;
+                UpdateTitleBarRegions();
+                DispatcherQueue.TryEnqueue(Microsoft.UI.Dispatching.DispatcherQueuePriority.Normal, UpdateTitleBarRegions);
+                return;
+            }
+
             SearchBoxHost.Visibility = Visibility.Visible;
             SearchBoxHost.IsHitTestVisible = true;
             if (SearchBox != null)
@@ -734,89 +756,6 @@ namespace raindesk
             ShowApp();
             ShowMainPanel();
         }
-
-        private void InstallWindowMessageHook()
-        {
-            try
-            {
-                if (_windowProcDelegate != null) return;
-
-                _windowSubclassHwnd = WinRT.Interop.WindowNative.GetWindowHandle(this);
-                if (_windowSubclassHwnd == IntPtr.Zero) return;
-
-                _windowProcDelegate = WindowMessageProc;
-                IntPtr proc = System.Runtime.InteropServices.Marshal.GetFunctionPointerForDelegate(_windowProcDelegate);
-                _originalWndProc = NativeWindowMethods.SetWindowLongPtr(_windowSubclassHwnd, NativeWindowMethods.GWLP_WNDPROC, proc);
-            }
-            catch (Exception ex)
-            {
-                LogUtil.WriteErrorLog(ex, "安装主窗口消息监听失败");
-            }
-        }
-
-        private void RestoreWindowMessageHook()
-        {
-            try
-            {
-                if (_windowSubclassHwnd == IntPtr.Zero || _originalWndProc == IntPtr.Zero) return;
-
-                NativeWindowMethods.SetWindowLongPtr(_windowSubclassHwnd, NativeWindowMethods.GWLP_WNDPROC, _originalWndProc);
-                _windowSubclassHwnd = IntPtr.Zero;
-                _originalWndProc = IntPtr.Zero;
-                _windowProcDelegate = null;
-            }
-            catch (Exception ex) { LogUtil.WriteErrorLog(ex, "恢复窗口消息钩子失败"); }
-        }
-
-        private IntPtr WindowMessageProc(IntPtr hwnd, uint msg, IntPtr wParam, IntPtr lParam)
-        {
-            if (MainWindowMessagePolicy.IsBeginMoveSizeMessage(msg, wParam))
-            {
-                _isInWindowMoveSizeLoop = true;
-                CancelScheduledLostFocusHide();
-            }
-            else if (MainWindowMessagePolicy.IsEndMoveSizeMessage(msg))
-            {
-                _isInWindowMoveSizeLoop = false;
-                CancelScheduledLostFocusHide();
-                if (_geometryService != null)
-                {
-                    _geometryService.PersistImmediate(this.AppWindow);
-                }
-                else
-                {
-                    PersistWindowGeometryImmediate();
-                }
-            }
-
-            if (MainWindowMessagePolicy.ShouldScheduleHideOnLostFocus(msg, wParam, ShouldSuppressLostFocusHide))
-            {
-                ReleaseTopMost(hwnd, false);
-                ScheduleHideOnLostFocus();
-            }
-
-            if (!_allowClose && !_isRedirectingMinimize && MainWindowMessagePolicy.ShouldRedirectMinimize(msg, wParam))
-            {
-                try
-                {
-                    _isRedirectingMinimize = true;
-                    NativeWindowMethods.ShowWindow(hwnd, SW_HIDE);
-                    LogUtil.WriteLog("MainWindow minimize redirected to tray");
-                }
-                finally
-                {
-                    _isRedirectingMinimize = false;
-                }
-
-                return IntPtr.Zero;
-            }
-
-            return NativeWindowMethods.CallWindowProc(_originalWndProc, hwnd, msg, wParam, lParam);
-        }
-
-        private delegate IntPtr WindowProcDelegate(IntPtr hwnd, uint msg, IntPtr wParam, IntPtr lParam);
-
-        // P/Invoke 声明已移至 Services.NativeWindowMethods
 
         #endregion
 
@@ -857,7 +796,10 @@ namespace raindesk
         {
             try
             {
-                if (Content?.XamlRoot == null || TopBarHost == null) return;
+                if (Content?.XamlRoot == null || TopBarHost == null)
+                {
+                    return;
+                }
 
                 double scale = Content.XamlRoot.RasterizationScale;
                 var titleBarSource = Microsoft.UI.Input.InputNonClientPointerSource.GetForWindowId(AppWindow.Id);
@@ -869,6 +811,7 @@ namespace raindesk
                 TryAddPassthroughRegion(passthroughRects, SearchBoxHost, scale);
                 TryAddPassthroughRegion(passthroughRects, TopSettingsButton, scale);
                 TryAddPassthroughRegion(passthroughRects, PageCloseButton, scale);
+                TryAddPassthroughRegion(passthroughRects, TopBarToggleButton, scale);
                 titleBarSource.SetRegionRects(
                     Microsoft.UI.Input.NonClientRegionKind.Passthrough,
                     passthroughRects.ToArray());
@@ -985,7 +928,7 @@ namespace raindesk
                 if (appData?.AppConfig?.HideSearchBox != true)
                 {
                     // Ctrl+F: 聚焦搜索框
-                    SearchBox?.Focus(FocusState.Keyboard);
+                    ShowSearchBox();
                 }
 
                 e.Handled = true;
@@ -1046,25 +989,8 @@ namespace raindesk
         }
 
         /// <summary>
-        /// 检查并显示首次使用引导
+        /// 检查并显示首次使用引导（已移除，启动不再弹出引导提示框）
         /// </summary>
-        private async System.Threading.Tasks.Task CheckAndShowOnboardingAsync()
-        {
-            try
-            {
-                if (OnboardingHelper.ShouldShowOnboarding())
-                {
-                    // 等待窗口完全加载
-                    await System.Threading.Tasks.Task.Delay(1000);
-                    await OnboardingHelper.ShowOnboardingAsync();
-                }
-            }
-            catch (Exception ex)
-            {
-                LogUtil.WriteErrorLog(ex, "CheckAndShowOnboardingAsync error");
-            }
-        }
-
         private void CloseButtonClick(object sender, RoutedEventArgs e)
         {
             HideApp();
@@ -1119,7 +1045,7 @@ namespace raindesk
 
             if (panelChanged)
             {
-                SurfaceMotion.PlayEntrance(InlineConfigPanel, translateX: 10d, translateY: 0d);
+                SurfaceMotion.PlayEntrance(InlineConfigPanel, translateX: MotionTokens.DisplacementPrimary, translateY: 0d);
             }
         }
 
@@ -1158,7 +1084,7 @@ namespace raindesk
 
             if (panelChanged)
             {
-                SurfaceMotion.PlayEntrance(InlineTodoPanel, translateX: 10d, translateY: 0d);
+                SurfaceMotion.PlayEntrance(InlineTodoPanel, translateX: MotionTokens.DisplacementPrimary, translateY: 0d);
             }
         }
 
@@ -1183,7 +1109,7 @@ namespace raindesk
 
             if (panelChanged && WindowRoot?.IsLoaded == true)
             {
-                SurfaceMotion.PlayEntrance(RightCard, translateX: -8d, translateY: 0d);
+                SurfaceMotion.PlayEntrance(RightCard, translateX: -MotionTokens.DisplacementPrimary, translateY: 0d);
             }
         }
 
@@ -1219,6 +1145,178 @@ namespace raindesk
             RightCard?.RefreshGlassBackdrop();
             ConfigPanel?.RefreshGlassBackdrop();
             _todoPanel?.RefreshGlassBackdrop();
+        }
+
+        private const double TopBarExpandedHeight = 64;
+        private const double TopBarCollapsedHeight = 40;
+
+        private Microsoft.UI.Dispatching.DispatcherQueueTimer? _topBarAnimTimer;
+        private long _topBarAnimStartTicks;
+        private double _topBarAnimFrom;
+        private double _topBarAnimTo;
+        private double _contentOpacityFrom;
+        private double _contentOpacityTo;
+        private FrameworkElement[]? _animContent;
+        private Action? _animCompleted;
+
+        private void TopBarToggleClick(object sender, RoutedEventArgs e)
+        {
+            AppConfig config = appData?.AppConfig;
+            if (config == null) return;
+
+            config.TopBarCollapsed = !config.TopBarCollapsed;
+            ApplyTopBarCollapsedState(config.TopBarCollapsed, animate: true);
+            AppServices.TryGet<ISaveService>()?.SaveDebounced();
+        }
+
+        internal void ExpandTopBarFromContextMenu()
+        {
+            AppConfig config = appData?.AppConfig;
+            if (config == null || !config.TopBarCollapsed)
+            {
+                return;
+            }
+
+            config.TopBarCollapsed = false;
+            ApplyTopBarCollapsedState(collapsed: false, animate: true);
+            AppServices.TryGet<ISaveService>()?.SaveDebounced();
+        }
+
+        internal bool IsTopBarCollapsedForContextMenu
+            => appData?.AppConfig?.TopBarCollapsed == true;
+
+        internal void ToggleTopBarFromContextMenu()
+            => TopBarToggleClick(this, new RoutedEventArgs());
+
+        private void ApplyTopBarCollapsedState(bool collapsed, bool animate)
+        {
+            if (TopBarHost == null || TopBarToggleIcon == null) return;
+
+            FrameworkElement[] content =
+            {
+                BrandButton,
+                SearchBoxHost,
+                TopSettingsButton,
+                PageCloseButton
+            };
+
+            TopBarToggleIcon.Glyph = collapsed ? "\uE70D" : "\uE70E";
+            TopBarInner.Padding = new Thickness(24, 0, 28, 0);
+
+            double to = collapsed ? TopBarCollapsedHeight : TopBarExpandedHeight;
+            double from = TopBarRow.Height.IsAuto
+                ? (collapsed ? TopBarExpandedHeight : TopBarCollapsedHeight)
+                : TopBarRow.Height.Value;
+
+            if (!animate)
+            {
+                TopBarRow.Height = new GridLength(to);
+                foreach (FrameworkElement element in content)
+                {
+                    element.Visibility = collapsed ? Visibility.Collapsed : Visibility.Visible;
+                    element.Opacity = collapsed ? 0 : 1;
+                }
+                RefreshTitleBarRegionsAfterCollapseChange();
+                return;
+            }
+
+            foreach (FrameworkElement element in content)
+            {
+                element.Visibility = Visibility.Visible;
+            }
+
+            AnimateTopBar(
+                from,
+                to,
+                collapsed ? 1 : 0,
+                collapsed ? 0 : 1,
+                content,
+                collapsed
+                    ? () =>
+                    {
+                        foreach (FrameworkElement element in content)
+                        {
+                            element.Visibility = Visibility.Collapsed;
+                        }
+                        RefreshTitleBarRegionsAfterCollapseChange();
+                    }
+                    : null);
+        }
+
+        /// <summary>
+        /// 折叠/展开会改变 TopBarHost 的高度，导致系统非客户区标题栏区域的
+        /// 实际边界变化。延迟一帧重新注册，确保折叠后顶部空白仍可拖动窗口。
+        /// </summary>
+        private void RefreshTitleBarRegionsAfterCollapseChange()
+        {
+            DispatcherQueue.TryEnqueue(() =>
+            {
+                TopBarHost?.UpdateLayout();
+                UpdateTitleBarRegions();
+            });
+        }
+
+        private void AnimateTopBar(
+            double from,
+            double to,
+            double contentOpacityFrom,
+            double contentOpacityTo,
+            FrameworkElement[] content,
+            Action? onCompleted)
+        {
+            _topBarAnimTimer?.Stop();
+            _topBarAnimStartTicks = Environment.TickCount64;
+            _topBarAnimFrom = from;
+            _topBarAnimTo = to;
+            _contentOpacityFrom = contentOpacityFrom;
+            _contentOpacityTo = contentOpacityTo;
+            _animContent = content;
+            _animCompleted = onCompleted;
+
+            if (_topBarAnimTimer == null)
+            {
+                _topBarAnimTimer = DispatcherQueue.CreateTimer();
+                _topBarAnimTimer.IsRepeating = true;
+                _topBarAnimTimer.Interval = TimeSpan.FromMilliseconds(16);
+                _topBarAnimTimer.Tick += TopBarAnimTimer_Tick;
+            }
+
+            _topBarAnimTimer.Start();
+        }
+
+        private void TopBarAnimTimer_Tick(Microsoft.UI.Dispatching.DispatcherQueueTimer sender, object args)
+        {
+            double totalMs = MotionTokens.Standard.TotalMilliseconds;
+            double t = Math.Min(1d, (Environment.TickCount64 - _topBarAnimStartTicks) / totalMs);
+            double eased = 1d - Math.Pow(1d - t, 4d);
+
+            TopBarRow.Height = new GridLength(_topBarAnimFrom + (_topBarAnimTo - _topBarAnimFrom) * eased);
+
+            if (_animContent != null)
+            {
+                double opacity = _contentOpacityFrom + (_contentOpacityTo - _contentOpacityFrom) * eased;
+                foreach (FrameworkElement element in _animContent)
+                {
+                    element.Opacity = opacity;
+                }
+            }
+
+            if (t >= 1d)
+            {
+                sender.Stop();
+                TopBarRow.Height = new GridLength(_topBarAnimTo);
+                if (_animContent != null)
+                {
+                    foreach (FrameworkElement element in _animContent)
+                    {
+                        element.Opacity = _contentOpacityTo;
+                    }
+                }
+
+                Action? completed = _animCompleted;
+                _animCompleted = null;
+                completed?.Invoke();
+            }
         }
 
         private void ApplyThemeChrome(AppThemeMode mode)
@@ -1382,103 +1480,6 @@ namespace raindesk
         public void ShowToast(string message, ToastType type = ToastType.Info)
         {
             ToastHelper.Show(message, type);
-        }
-
-        private void ImportBackupFile(object sender, RoutedEventArgs e)
-        {
-            _ = ImportBackupAsync();
-        }
-
-        private async System.Threading.Tasks.Task ImportBackupAsync()
-        {
-            // 先显示窗口，否则文件选择器无法弹出
-            ShowApp();
-
-            IBackupFilePicker? picker = AppServices.TryGet<IBackupFilePicker>();
-            IBackupService? backupService = AppServices.TryGet<IBackupService>();
-            if (picker == null || backupService == null)
-            {
-                var unavailableDialog = new ContentDialog
-                {
-                    Title = "导入失败",
-                    Content = "备份服务尚未初始化。",
-                    CloseButtonText = "确定",
-                    XamlRoot = Content.XamlRoot
-                };
-                await unavailableDialog.ShowAsync();
-                return;
-            }
-
-            string? sourcePath = await picker.PickImportPathAsync();
-            if (string.IsNullOrWhiteSpace(sourcePath))
-            {
-                return;
-            }
-
-            BackupOperationResult result = await backupService.ImportAsync(sourcePath);
-            if (!result.Success)
-            {
-                var failedDialog = new ContentDialog
-                {
-                    Title = "导入失败",
-                    Content = result.Error ?? "无法导入备份文件。",
-                    CloseButtonText = "确定",
-                    XamlRoot = Content.XamlRoot
-                };
-                await failedDialog.ShowAsync();
-                return;
-            }
-
-            var dialog = new ContentDialog
-            {
-                Title = "导入成功",
-                Content = "备份导入成功！应用将重新启动以加载新数据。",
-                CloseButtonText = "确定",
-                XamlRoot = Content.XamlRoot
-            };
-            await dialog.ShowAsync();
-            ProcessUtil.ReStartApp();
-        }
-
-        private async System.Threading.Tasks.Task ExportBackupAsync()
-        {
-            IBackupFilePicker? picker = AppServices.TryGet<IBackupFilePicker>();
-            IBackupService? backupService = AppServices.TryGet<IBackupService>();
-            if (picker == null || backupService == null)
-            {
-                return;
-            }
-
-            string? destinationPath = await picker.PickExportPathAsync(
-                "Data-GD-" + DateTime.Now.ToString("yyMMdd"));
-            if (string.IsNullOrWhiteSpace(destinationPath))
-            {
-                return;
-            }
-
-            BackupOperationResult result = await backupService.ExportAsync(destinationPath);
-            if (result.Success)
-            {
-                var dialog = new ContentDialog
-                {
-                    Title = "备份成功",
-                    Content = "数据已导出到 .bak 文件。",
-                    CloseButtonText = "确定",
-                    XamlRoot = Content.XamlRoot
-                };
-                await dialog.ShowAsync();
-            }
-            else
-            {
-                var dialog = new ContentDialog
-                {
-                    Title = "备份失败",
-                    Content = result.Error ?? "无法写入备份文件。",
-                    CloseButtonText = "确定",
-                    XamlRoot = Content.XamlRoot
-                };
-                await dialog.ShowAsync();
-            }
         }
 
         #endregion

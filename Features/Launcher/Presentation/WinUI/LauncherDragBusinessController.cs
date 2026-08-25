@@ -183,7 +183,6 @@ internal sealed class LauncherDragBusinessController
 
     private ListViewItem? _draggedContainer;
     private List<IconInfo>? _pendingBatchDropReleaseIcons;
-    private static BitmapImage? _emptyDragBitmapImage;
 
     // P2: 布局缓存 — 避免同一帧内多次构建完整 Dictionary 和网格排列结果。
     // 缓存键：集合版本 + 列数 + 槽位尺寸 + 滚动原点
@@ -571,7 +570,7 @@ internal sealed class LauncherDragBusinessController
         ImageUtil.EnsureIconBitmap(_draggedIcon);
         double captureWidth = LauncherDragPageContext.LauncherShortcutDragPreviewSize;
         double captureHeight = LauncherDragPageContext.LauncherShortcutDragPreviewSize;
-        bool animatePreview = !AppData.AppConfig.PMModel;
+        bool animatePreview = true;
         var overlay = DragOverlayCanvas;
         ImageSource? iconSource = _draggedIcon.BitmapImage_NoWrite ?? _draggedIcon.BitmapImage;
 
@@ -684,7 +683,8 @@ internal sealed class LauncherDragBusinessController
                 if (index < 0 || index >= ShortcutTiles.Count) return;
                 IconInfo icon = ShortcutTiles[index];
                 if (LauncherDragIconClassifier.IsDragYieldPlaceholder(icon) || IsDraggedIcon(icon)) return;
-                try { IconListView.ScrollIntoView(icon, ScrollIntoViewAlignment.Default); } catch { }
+                try { IconListView.ScrollIntoView(icon, ScrollIntoViewAlignment.Default); }
+                catch (Exception ex) { LogUtil.WriteErrorLog(ex, "拖拽重排滚动图标失败: " + icon.Name); }
             }
             ScrollIconAt(min);
             ScrollIconAt(max);
@@ -708,7 +708,7 @@ internal sealed class LauncherDragBusinessController
         if (generation != _liveReorderSlideGeneration || IconListView == null) return;
 
         int started = 0;
-        if (previousPositions.Count > 0 && !AppData.AppConfig.PMModel)
+        if (previousPositions.Count > 0)
         {
             var easing = new QuadraticEase { EasingMode = EasingMode.EaseOut };
             double riseBoost = Math.Min(LauncherDragPageContext.ShortcutReorderYieldRiseOffset, _ctx.GetShortcutItemSlotHeight() * 0.14d);
@@ -804,7 +804,8 @@ internal sealed class LauncherDragBusinessController
         if (foundVisiblePlaceholder) return;
 
         IconInfo firstPlaceholder = _batchDragYieldPlaceholders[0];
-        try { IconListView.ScrollIntoView(firstPlaceholder, ScrollIntoViewAlignment.Leading); } catch { }
+        try { IconListView.ScrollIntoView(firstPlaceholder, ScrollIntoViewAlignment.Leading); }
+        catch (Exception ex) { LogUtil.WriteErrorLog(ex, "批量拖拽占位符滚动失败"); }
         IconListView.UpdateLayout();
 
         foundVisiblePlaceholder = false;
@@ -948,26 +949,7 @@ internal sealed class LauncherDragBusinessController
     }
 
     public static BitmapImage GetEmptyDragBitmapImage()
-    {
-        if (_emptyDragBitmapImage != null) return _emptyDragBitmapImage;
-
-        byte[] png = Convert.FromBase64String(
-            "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==");
-        var stream = new InMemoryRandomAccessStream();
-        using (var output = stream.GetOutputStreamAt(0))
-        using (var writer = new DataWriter(output))
-        {
-            writer.WriteBytes(png);
-            writer.StoreAsync().AsTask().GetAwaiter().GetResult();
-            writer.FlushAsync().AsTask().GetAwaiter().GetResult();
-        }
-
-        stream.Seek(0);
-        var bitmap = new BitmapImage();
-        bitmap.SetSource(stream);
-        _emptyDragBitmapImage = bitmap;
-        return _emptyDragBitmapImage;
-    }
+        => LauncherDragImageFactory.GetEmptyDragBitmapImage();
 
     // ── Overlay Item Chrome ───────────────────────────────────────────
 
@@ -1228,6 +1210,7 @@ internal sealed class LauncherDragBusinessController
     {
         if (IconListView == null) return;
 
+        // 首次布局让容器实现，读取几何；末尾统一提交一次，避免两轮 Measure/Arrange。
         IconListView.UpdateLayout();
         double availableWidth = _ctx.GetShortcutAvailableWidth();
         int columnCount = _ctx.GetShortcutColumnCount();
@@ -1310,7 +1293,12 @@ internal sealed class LauncherDragBusinessController
             }
         }
 
-        _ctx.LayoutApply.Compact(tiles);
+        // All Groups 使用自动网格布局，不依赖每个图标的手动坐标。
+        // 跳过全量压缩，避免切换到全部视图时在 UI 线程遍历并更新所有图标布局。
+        if (!IsShowingAllGroups)
+        {
+            _ctx.LayoutApply.Compact(tiles);
+        }
         _ctx.ApplyShortcutTileSnapshot(tiles);
 
         _ctx.LayoutApply.Schedule();
@@ -1342,10 +1330,10 @@ internal sealed class LauncherDragBusinessController
         Point scrollOrigin = default;
         if (listView.ItemsPanelRoot is UIElement panel)
         {
-            try { scrollOrigin = panel.TransformToVisual(listView).TransformPoint(default); } catch { }
+            try { scrollOrigin = panel.TransformToVisual(listView).TransformPoint(default); }
+            catch (Exception ex) { LogUtil.WriteErrorLog(ex, "计算拖拽布局滚动原点失败"); }
         }
-        bool usesManualPositions = listView.ItemsPanelRoot is not LauncherGridPanel launcherPanel
-            || launcherPanel.UseManualPositions;
+        bool usesManualPositions = listView.ItemsPanelRoot is LauncherGridPanel { UseManualPositions: true };
 
         // 检查缓存是否有效
         if (_cachedLayoutMap != null
@@ -1448,7 +1436,7 @@ internal sealed class LauncherDragBusinessController
 
     private bool ShouldAnimateInteraction()
     {
-        return !AppData.AppConfig.PMModel && MotionPreferences.ShouldAnimate;
+        return MotionPreferences.ShouldAnimate;
     }
 
     public void SetDraggedContainer(ListViewItem? container) => _draggedContainer = container;
@@ -1703,7 +1691,7 @@ internal sealed class LauncherDragBusinessController
             _crossGroupPreview.IsCurrent,
             pt => _crossGroupPreviewPlacement.TryAnimatePlacement(
                 pt, _crossGroupPreview.IsCurrent, _dragPreviewController.HasPreview,
-                animationsAllowed: !AppData.AppConfig.PMModel,
+                animationsAllowed: true,
                 hideDraggedSourceItems: !_draggedIconsSuppressedFromTiles,
                 animate: _dragPreviewController.AnimateToPlacement),
             CrossGroupPreviewIconOpacity);
@@ -1714,7 +1702,7 @@ internal sealed class LauncherDragBusinessController
         LauncherCrossGroupPreviewCancelPlan plan = _crossGroupPreview.Cancel(
             _draggedIconsSuppressedFromTiles,
             _isCustomDragActive,
-            AppData.AppConfig.PMModel,
+            reducedMotion: false,
             _draggedIcon != null);
         if (plan.Mode == LauncherCrossGroupPreviewCancelMode.None) return;
 
@@ -1856,7 +1844,7 @@ internal sealed class LauncherDragBusinessController
 
         var trailingIcons = new List<IconInfo>();
         var trailingPositions = new Dictionary<IconInfo, Point>();
-        if (!AppData.AppConfig.PMModel && IconListView != null)
+        if (IconListView != null)
         {
             IconListView.UpdateLayout();
             for (int i = insertIndex + 1; i < ShortcutTiles.Count; i++)
@@ -1873,7 +1861,7 @@ internal sealed class LauncherDragBusinessController
 
         _batchDragPlaceholders.ApplyRestore(ShortcutTiles, restorePlan);
 
-        if (!AppData.AppConfig.PMModel && orderedIcons.Count > 0 && IconListView != null)
+        if (orderedIcons.Count > 0 && IconListView != null)
         {
             var iconsSnapshot = orderedIcons.ToList();
             var trailingSnapshot = trailingIcons.ToList();
@@ -2406,7 +2394,7 @@ internal sealed class LauncherDragBusinessController
         _ctx.SetIconDragActive(false);
         _draggedContainer = null;
 
-        bool animate = _isCustomDragActive && !AppData.AppConfig.PMModel;
+        bool animate = _isCustomDragActive;
 
         CompleteDragReorder(
             committedFolderDrop,
@@ -2813,7 +2801,7 @@ internal sealed class LauncherDragBusinessController
     private void PreviewSingleIconLiveYield(int targetIndex)
     {
         if (!_isCustomDragActive || _draggedIcon == null || _draggedIcons.Count != 1
-            || _draggedIconsSuppressedFromTiles || IconListView == null || AppData.AppConfig.PMModel)
+            || _draggedIconsSuppressedFromTiles || IconListView == null)
             return;
         int ci = ShortcutTiles.IndexOf(_draggedIcon);
         int sti = Math.Clamp(targetIndex, 0, Math.Max(0, GetTileInsertUpperBound(ShortcutTiles)));

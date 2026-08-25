@@ -17,12 +17,19 @@
                     <RowDefinition Height="Auto"/>
                 </Grid.RowDefinitions>
 
-                <Grid ColumnSpacing="20">
+                <!-- 顶部导航与搜索保持在同一行，避免 TabView 默认模板把工具栏撑成多行。 -->
+                <Grid Height="58"
+                      ColumnSpacing="20"
+                      VerticalAlignment="Top">
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="*"/>
                         <ColumnDefinition Width="Auto"/>
                     </Grid.ColumnDefinitions>
                     <TabView x:Name="MyTabControl"
+                             Height="56"
+                             MinHeight="56"
+                             HorizontalAlignment="Stretch"
+                             VerticalAlignment="Center"
                              SelectionChanged="TabControl_SelectionChanged"
                              IsAddTabButtonVisible="False"
                              CanDragTabs="False"
@@ -31,6 +38,10 @@
                             <Style TargetType="TabViewItem">
                                 <Setter Property="FontSize" Value="17"/>
                                 <Setter Property="FontWeight" Value="SemiBold"/>
+                                <Setter Property="Height" Value="56"/>
+                                <Setter Property="MinHeight" Value="56"/>
+                                <Setter Property="Padding" Value="14,0"/>
+                                <Setter Property="VerticalContentAlignment" Value="Center"/>
                             </Style>
                         </TabView.Resources>
                         <TabViewItem Tag="System" Header="系统应用" IsClosable="False"/>
@@ -44,7 +55,8 @@
                             Padding="12,0"
                             MinWidth="240"
                             MaxWidth="360"
-                            Height="42"
+                            Width="300"
+                            Height="56"
                             VerticalAlignment="Center">
                         <Grid ColumnSpacing="10">
                             <Grid.ColumnDefinitions>

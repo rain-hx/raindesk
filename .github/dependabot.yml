@@ -1,0 +1,28 @@
+# Dependabot 定期扫描 NuGet 依赖，自动开启 PR 修复漏洞与升级。
+# 漏洞严重度门禁已在 .github/workflows/ci.yml 的 NuGet vulnerability audit 步骤中处理。
+version: 2
+updates:
+  - package-ecosystem: nuget
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+      time: '09:00'
+      timezone: 'Asia/Shanghai'
+    open-pull-requests-limit: 5
+    labels:
+      - dependencies
+    commit-message:
+      prefix: chore(deps)
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+      time: '09:00'
+      timezone: 'Asia/Shanghai'
+    open-pull-requests-limit: 5
+    labels:
+      - ci
+    commit-message:
+      prefix: ci(deps)

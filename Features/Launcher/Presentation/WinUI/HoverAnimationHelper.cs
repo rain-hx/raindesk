@@ -15,12 +15,10 @@ namespace raindesk.Features.Launcher.Presentation.WinUI;
 /// </summary>
 internal static class HoverAnimationHelper
 {
-    public static void ApplyHoverScale(object sender, double targetScale, int milliseconds, bool isPerformanceMode)
+    public static void ApplyHoverScale(object sender, double targetScale, int milliseconds)
     {
         try
         {
-            if (isPerformanceMode) return;
-
             if (sender is not FrameworkElement element) return;
 
             Image? img = FindDescendant<Image>(element);

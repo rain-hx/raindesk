@@ -39,10 +39,15 @@
             <SolidColorBrush x:Key="LauncherShellBackgroundBrush" Color="#18FFFFFF"/>
             <SolidColorBrush x:Key="LauncherShellBorderBrush" Color="#40DCE7F5"/>
             <SolidColorBrush x:Key="LauncherIconSurfaceBrush" Color="#B8FFFFFF"/>
+            <SolidColorBrush x:Key="LauncherFolderTileBrush" Color="#668A9CB3"/>
+            <SolidColorBrush x:Key="LauncherFolderPreviewCellBrush" Color="#8AFFFFFF"/>
             <SolidColorBrush x:Key="LauncherFolderPanelBackgroundBrush" Color="#DDF5FAFF"/>
+            <SolidColorBrush x:Key="LauncherFolderBubbleBackgroundBrush" Color="#E62B1833"/>
+            <SolidColorBrush x:Key="LauncherFolderBubbleTextBrush" Color="#FFF9FDFF"/>
             <SolidColorBrush x:Key="LauncherMutedBorderBrush" Color="#90DCE7F5"/>
             <SolidColorBrush x:Key="LauncherSearchBackgroundBrush" Color="#DDFDFEFF"/>
             <SolidColorBrush x:Key="LauncherRailSelectedBrush" Color="#70FFFFFF"/>
+            <SolidColorBrush x:Key="LauncherBGDarkOverlayBrush" Color="#6612263F"/>
         </ResourceDictionary>
         <ResourceDictionary x:Key="Light">
             <SolidColorBrush x:Key="AppBackgroundBrush" Color="#F6F9FE"/>
@@ -79,10 +84,15 @@
             <SolidColorBrush x:Key="LauncherShellBackgroundBrush" Color="#18FFFFFF"/>
             <SolidColorBrush x:Key="LauncherShellBorderBrush" Color="#40DCE7F5"/>
             <SolidColorBrush x:Key="LauncherIconSurfaceBrush" Color="#B8FFFFFF"/>
+            <SolidColorBrush x:Key="LauncherFolderTileBrush" Color="#668A9CB3"/>
+            <SolidColorBrush x:Key="LauncherFolderPreviewCellBrush" Color="#8AFFFFFF"/>
             <SolidColorBrush x:Key="LauncherFolderPanelBackgroundBrush" Color="#DDF5FAFF"/>
+            <SolidColorBrush x:Key="LauncherFolderBubbleBackgroundBrush" Color="#E62B1833"/>
+            <SolidColorBrush x:Key="LauncherFolderBubbleTextBrush" Color="#FFF9FDFF"/>
             <SolidColorBrush x:Key="LauncherMutedBorderBrush" Color="#90DCE7F5"/>
             <SolidColorBrush x:Key="LauncherSearchBackgroundBrush" Color="#DDFDFEFF"/>
             <SolidColorBrush x:Key="LauncherRailSelectedBrush" Color="#70FFFFFF"/>
+            <SolidColorBrush x:Key="LauncherBGDarkOverlayBrush" Color="#6612263F"/>
         </ResourceDictionary>
         <ResourceDictionary x:Key="Dark">
             <SolidColorBrush x:Key="AppBackgroundBrush" Color="#0E1726"/>
@@ -119,10 +129,15 @@
             <SolidColorBrush x:Key="LauncherShellBackgroundBrush" Color="#40182337"/>
             <SolidColorBrush x:Key="LauncherShellBorderBrush" Color="#6634455F"/>
             <SolidColorBrush x:Key="LauncherIconSurfaceBrush" Color="#6620314A"/>
+            <SolidColorBrush x:Key="LauncherFolderTileBrush" Color="#7020314A"/>
+            <SolidColorBrush x:Key="LauncherFolderPreviewCellBrush" Color="#803B4F6B"/>
             <SolidColorBrush x:Key="LauncherFolderPanelBackgroundBrush" Color="#DD182337"/>
+            <SolidColorBrush x:Key="LauncherFolderBubbleBackgroundBrush" Color="#EE17101F"/>
+            <SolidColorBrush x:Key="LauncherFolderBubbleTextBrush" Color="#FFF8FBFF"/>
             <SolidColorBrush x:Key="LauncherMutedBorderBrush" Color="#8034455F"/>
             <SolidColorBrush x:Key="LauncherSearchBackgroundBrush" Color="#DD142033"/>
             <SolidColorBrush x:Key="LauncherRailSelectedBrush" Color="#5520314A"/>
+            <SolidColorBrush x:Key="LauncherBGDarkOverlayBrush" Color="#6612263F"/>
         </ResourceDictionary>
         <ResourceDictionary x:Key="HighContrast">
             <SolidColorBrush x:Key="AppBackgroundBrush" Color="{ThemeResource SystemColorWindowColor}"/>
@@ -159,10 +174,15 @@
             <SolidColorBrush x:Key="LauncherShellBackgroundBrush" Color="{ThemeResource SystemColorWindowColor}"/>
             <SolidColorBrush x:Key="LauncherShellBorderBrush" Color="{ThemeResource SystemColorButtonTextColor}"/>
             <SolidColorBrush x:Key="LauncherIconSurfaceBrush" Color="{ThemeResource SystemColorWindowColor}"/>
+            <SolidColorBrush x:Key="LauncherFolderTileBrush" Color="{ThemeResource SystemColorHighlightColor}"/>
+            <SolidColorBrush x:Key="LauncherFolderPreviewCellBrush" Color="{ThemeResource SystemColorWindowColor}"/>
             <SolidColorBrush x:Key="LauncherFolderPanelBackgroundBrush" Color="{ThemeResource SystemColorWindowColor}"/>
+            <SolidColorBrush x:Key="LauncherFolderBubbleBackgroundBrush" Color="{ThemeResource SystemColorWindowColor}"/>
+            <SolidColorBrush x:Key="LauncherFolderBubbleTextBrush" Color="{ThemeResource SystemColorWindowTextColor}"/>
             <SolidColorBrush x:Key="LauncherMutedBorderBrush" Color="{ThemeResource SystemColorButtonTextColor}"/>
             <SolidColorBrush x:Key="LauncherSearchBackgroundBrush" Color="{ThemeResource SystemColorWindowColor}"/>
             <SolidColorBrush x:Key="LauncherRailSelectedBrush" Color="{ThemeResource SystemColorHighlightColor}"/>
+            <SolidColorBrush x:Key="LauncherBGDarkOverlayBrush" Color="Transparent"/>
         </ResourceDictionary>
     </ResourceDictionary.ThemeDictionaries>
 

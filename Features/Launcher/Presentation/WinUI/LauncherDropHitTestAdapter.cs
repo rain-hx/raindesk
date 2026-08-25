@@ -29,14 +29,15 @@ internal static class LauncherDropHitTestAdapter
             listView.UpdateLayout();
         }
 
-        bool preserveManualPositions = listView.ItemsPanelRoot is not LauncherGridPanel launcherPanel
-            || launcherPanel.UseManualPositions;
+        bool preserveManualPositions = listView.ItemsPanelRoot is LauncherGridPanel { UseManualPositions: true };
+        bool uniformTiles = listView.ItemsPanelRoot is ItemsWrapGrid;
         var gridItems = tiles
             .Where(icon => icon != null && include(icon))
             .Select(icon => LauncherShortcutGridItemAdapter.Create(
                 icon,
                 metrics.ColumnCount,
-                preserveManualPositions));
+                preserveManualPositions,
+                uniformTiles));
         Dictionary<object, LauncherGridRect> stableLayout =
             LauncherGridLayoutEngine.Arrange(gridItems, metrics);
         Point panelOrigin = GetPanelOrigin(listView);

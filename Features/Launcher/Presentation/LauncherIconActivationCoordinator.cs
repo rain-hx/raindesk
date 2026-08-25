@@ -38,21 +38,22 @@ internal sealed class LauncherIconActivationCoordinator<TItem>
         bool doubleOpen)
     {
         ArgumentNullException.ThrowIfNull(item);
-        if (!interactionEnabled)
-        {
-            return false;
-        }
         if (modifierDown || batchMode)
         {
             return true;
         }
+        if (_isFolder(item))
+        {
+            _openFolder(item);
+            return true;
+        }
+        if (!interactionEnabled)
+        {
+            return false;
+        }
         if (_isAddPlaceholder(item))
         {
             _showAddPanel();
-        }
-        else if (_isFolder(item))
-        {
-            _openFolder(item);
         }
         else if (!doubleOpen)
         {
@@ -78,12 +79,9 @@ internal sealed class LauncherIconActivationCoordinator<TItem>
 
         if (_isFolder(item))
         {
-            _openFolder(item);
+            return true;
         }
-        else
-        {
-            Activate(item, LauncherActivationMode.Default);
-        }
+        Activate(item, LauncherActivationMode.Default);
         return true;
     }
 

@@ -19,6 +19,7 @@ using System.Runtime.InteropServices;
 using System.Threading;
 using Microsoft.UI.Dispatching;
 using Microsoft.UI.Xaml;
+using Microsoft.UI.Xaml.Automation;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Input;
 using Microsoft.UI.Xaml.Media;
@@ -35,6 +36,7 @@ using raindesk.Features.Workspace.Presentation.WinUI;
 using Microsoft.UI.Xaml.Media.Animation;
 using Windows.Foundation;
 using Windows.Storage.Streams;
+using Windows.UI.ViewManagement;
 using WinRT.Interop;
 
 namespace raindesk.Control.UserControls.PannelCard
@@ -56,6 +58,7 @@ namespace raindesk.Control.UserControls.PannelCard
         private bool _isControlLoaded;
         private AppData appData => _dataProvider.Current;
         private readonly LauncherShortcutListState _shortcutList = new();
+        private long _lastDragTargetLogTick;
         private BulkObservableCollection<IconInfo> shortcutTiles => _shortcutList.Items;
         private readonly SystemItemWindow.SystemItemViewModel inlineSystemVm;
         private ObservableCollection<IconInfo> currentSelectedIcons;
@@ -78,6 +81,9 @@ namespace raindesk.Control.UserControls.PannelCard
         private readonly LauncherShortcutLayoutScheduler _shortcutLayoutScheduler;
         private readonly LauncherShortcutTransitionController _shortcutTransitions;
         private readonly LauncherShortcutLayoutApplyController _layoutApply;
+        private readonly LauncherIconBitmapLoader _iconBitmapLoader;
+        private ItemsPanelTemplate? _groupPanelTemplate;
+        private ItemsPanelTemplate? _allGroupsPanelTemplate;
         private const double ShortcutGridRightInset = 8d;
         private const double ShortcutGridRootHorizontalInset = 66d;
         private static readonly TimeSpan ShortcutWrapAnimationDuration = TimeSpan.FromMilliseconds(220);
@@ -97,6 +103,7 @@ namespace raindesk.Control.UserControls.PannelCard
         private LauncherFolderOverlayViewModel folderOverlayState => FolderOverlayViewModel;
         private readonly FolderOverlayController _folderOverlay;
         private readonly FolderOverlayMotionController _folderOverlayMotion = new();
+        private IconInfo? _folderOverlayAnchor;
         private readonly GroupTabEditController _groupTabEdit;
         private readonly InlineAddPanelController _inlineAddPanel;
         private readonly LauncherContextMenuHandler _contextMenuHandler;
@@ -116,9 +123,11 @@ namespace raindesk.Control.UserControls.PannelCard
         private BulkObservableCollection<IconInfo> CrossGroupPreviewTiles => _crossGroupPreviewOverlayController.Tiles;
         private List<IconInfo>? _pendingBatchDropReleaseIcons;
         private readonly LauncherDragOrchestrator _dragOrchestrator;
-        private static BitmapImage? _emptyDragBitmapImage;
         private readonly LauncherItemAnimationCoordinator _itemAnimations = new();
         private readonly LauncherShortcutContainerStateController _shortcutContainers;
+        private IconInfo? _pressedFolder;
+        private Point _pressedFolderOrigin;
+        private uint _pressedFolderPointerId;
 
         // 兼容属性：委托到 _dragState，保持现有调用点不变
         private IconInfo? _draggedIcon { get => _dragState.DraggedIcon; set => _dragState.DraggedIcon = value; }
@@ -401,6 +410,17 @@ namespace raindesk.Control.UserControls.PannelCard
                     }
                 });
             this.InitializeComponent();
+            _iconBitmapLoader = new LauncherIconBitmapLoader(DispatcherQueue);
+            _groupPanelTemplate = IconListView.ItemsPanel;
+            if (Resources.TryGetValue("AllGroupsShortcutPanelTemplate", out object? allGroupsTemplate)
+                && allGroupsTemplate is ItemsPanelTemplate allGroupsPanel)
+            {
+                _allGroupsPanelTemplate = allGroupsPanel;
+            }
+            IconListView.AddHandler(
+                UIElement.PointerReleasedEvent,
+                new PointerEventHandler(Icon_PointerReleased),
+                handledEventsToo: true);
             _shortcutContainers = new LauncherShortcutContainerStateController(
                 IconListView,
                 _itemAnimations,
@@ -422,7 +442,7 @@ namespace raindesk.Control.UserControls.PannelCard
                 ShouldAnimateInteraction,
                 ShouldAnimateInteraction,
                 ShouldAnimateInteraction,
-                () => !appData.AppConfig.PMModel,
+                () => true,
                 ShortcutReorderAnimationDuration,
                 ShortcutWrapAnimationDuration);
             _shortcutLayoutScheduler = new LauncherShortcutLayoutScheduler(
@@ -573,8 +593,9 @@ namespace raindesk.Control.UserControls.PannelCard
                 v => _groupTabReorderSuppressedForIconDrag = v,
                 () => appData,
                 () => showingAllGroups,
-                config => config.PMModel,
+                _ => false,
                 SelectAllGroups,
+                index => SelectGroup(index),
                 (info, index) => SelectGroup(index),
                 SyncGroupTabItems);
             _inlineAddPanel = new InlineAddPanelController(
@@ -597,6 +618,8 @@ namespace raindesk.Control.UserControls.PannelCard
                 () => appData,
                 () => _batchModeController,
                 () => shortcutTiles,
+                () => IconListView.SelectedItems.OfType<IconInfo>().ToArray(),
+                () => _iconSelection.ClearSelection(),
                 RebuildShortcutTiles,
                 SyncFolderOverlayAfterFolderMutation,
                 RefreshShortcutItemSpans,
@@ -685,6 +708,7 @@ namespace raindesk.Control.UserControls.PannelCard
         {
             // WinUI 3: 延迟加载
             _isControlLoaded = true;
+            _iconBitmapLoader.Reset();
             _dataProvider.StateReplaced -= AppDataProvider_StateReplaced;
             _dataProvider.StateReplaced += AppDataProvider_StateReplaced;
             AttachAppDataSubscriptions(appData);
@@ -782,10 +806,109 @@ namespace raindesk.Control.UserControls.PannelCard
 
         private static readonly WorkspaceGroupTabWidthMetrics GroupTabWidthMetrics =
             WorkspaceGroupTabWidthMetrics.Default;
+        private bool _isGroupBarExpanded = true;
 
         private void GroupListView_ContainerContentChanging(ListViewBase sender, ContainerContentChangingEventArgs args)
         {
             _groupTabContainers.Handle(sender, args);
+            if (!args.InRecycleQueue
+                && args.Phase >= 2
+                && args.ItemContainer is ListViewItem item
+                && args.Item is MenuInfo menu)
+            {
+                ApplyGroupBarDisplayState(item, menu);
+            }
+        }
+
+        private void ToggleGroupBarClick(object sender, RoutedEventArgs e)
+        {
+            _isGroupBarExpanded = !_isGroupBarExpanded;
+            ApplyGroupBarDisplayStateToRealizedItems();
+            ApplyGroupSelectionIndicatorDisplayState();
+
+            if (_isGroupBarExpanded)
+            {
+                RefreshGroupTabNaturalWidths();
+            }
+
+        }
+
+        private void ToggleTopBarFromIconMenu(object sender, RoutedEventArgs e)
+            => MainWindow.mainWindow?.ToggleTopBarFromContextMenu();
+
+        private void ToggleGroupBarFromIconMenu(object sender, RoutedEventArgs e)
+            => ToggleGroupBarClick(sender, e);
+
+        private void ApplyGroupBarDisplayStateToRealizedItems()
+        {
+            if (GroupListView == null)
+            {
+                return;
+            }
+
+            for (int i = 0; i < GroupListView.Items.Count; i++)
+            {
+                if (GroupListView.ContainerFromIndex(i) is ListViewItem item
+                    && GroupListView.Items[i] is MenuInfo menu)
+                {
+                    ApplyGroupBarDisplayState(item, menu);
+                }
+            }
+        }
+
+        private void ApplyGroupBarDisplayState(ListViewItem item, MenuInfo menu)
+        {
+            if (item.ContentTemplateRoot is DependencyObject root)
+            {
+                if (MenuGeometryHelper.FindDescendantByName<TextBlock>(root, "GroupTabLabel") is TextBlock label)
+                {
+                    label.Visibility = _isGroupBarExpanded ? Visibility.Visible : Visibility.Collapsed;
+                }
+
+                if (MenuGeometryHelper.FindDescendantByName<Grid>(root, "GroupTabContentHost") is Grid contentHost)
+                {
+                    contentHost.HorizontalAlignment = _isGroupBarExpanded
+                        ? HorizontalAlignment.Left
+                        : HorizontalAlignment.Center;
+                    contentHost.Margin = _isGroupBarExpanded
+                        ? new Thickness(6d, 0d, 6d, 0d)
+                        : new Thickness(0d);
+                }
+
+                if (MenuGeometryHelper.FindDescendantByName<Button>(root, "InlineGroupBarToggleButton") is Button toggleButton
+                    && MenuGeometryHelper.FindDescendantByName<FontIcon>(toggleButton, "InlineGroupBarToggleIcon") is FontIcon toggleIcon)
+                {
+                    toggleIcon.Glyph = _isGroupBarExpanded ? "\uE76B" : "\uE76C";
+                    string toggleLabel = _isGroupBarExpanded ? "收起分组名称" : "展开分组名称";
+                    AutomationProperties.SetName(toggleButton, toggleLabel);
+                    ToolTipService.SetToolTip(toggleButton, toggleLabel);
+                }
+            }
+
+            ToolTipService.SetToolTip(item, _isGroupBarExpanded ? null : menu.MenuName);
+            if (_isGroupBarExpanded)
+            {
+                item.Width = double.NaN;
+                item.Margin = new Thickness(0d, 0d, 0d, 4d);
+            }
+            else
+            {
+                // Keep every compact group on the same 48 px center line. The
+                // previous wider "All" item kept the compact rail shifted right.
+                item.Width = 48d;
+                item.Margin = new Thickness(0d, 0d, 0d, GroupTabWidthMetrics.RightMargin);
+            }
+        }
+
+        private void ApplyGroupSelectionIndicatorDisplayState()
+        {
+            if (GroupTabSelectionIndicatorMark == null)
+            {
+                return;
+            }
+
+            GroupTabSelectionIndicatorMark.Width = _isGroupBarExpanded ? 4d : 3d;
+            GroupTabSelectionIndicatorMark.Height = _isGroupBarExpanded ? 36d : 24d;
         }
 
         internal void RefreshGroupIcon(MenuInfo menu)
@@ -831,6 +954,7 @@ namespace raindesk.Control.UserControls.PannelCard
             _externalImport.CancelPending();
             _shortcutLayoutScheduler.Cancel();
             _folderOverlayMotion.Stop();
+            _iconBitmapLoader.Dispose();
         }
 
         private void IconContextFlyout_Opening(object? sender, object e)
@@ -901,16 +1025,26 @@ namespace raindesk.Control.UserControls.PannelCard
             _layoutApply.ScheduleFromWindow();
         }
 
-        /// <summary>动画开关：性能模式（PMModel）下全部关闭。</summary>
+        public void FocusShortcutContent()
+        {
+            DispatcherQueue.TryEnqueue(() => IconListView?.Focus(FocusState.Programmatic));
+        }
+
+        /// <summary>动画开关：始终尊重系统减少动画偏好。</summary>
         private bool ShouldAnimateInteraction()
-            => MotionPreferences.ShouldAnimate && !appData.AppConfig.PMModel;
+            => MotionPreferences.ShouldAnimate;
 
         private void AnimateFolderOverlayOpen()
         {
-            DispatcherQueue.TryEnqueue(() => _folderOverlayMotion.Enter(
-                FolderOverlay,
-                FolderOverlayPanel,
-                ShouldAnimateInteraction()));
+            DispatcherQueue.TryEnqueue(() =>
+            {
+                PositionFolderOverlayNearAnchor();
+                _folderOverlayMotion.Enter(
+                    FolderOverlay,
+                    FolderOverlayPanel,
+                    ShouldAnimateInteraction());
+                FolderItemsListView?.Focus(FocusState.Programmatic);
+            });
         }
 
         private void AnimateFolderOverlayClose(Action completed)
@@ -919,7 +1053,11 @@ namespace raindesk.Control.UserControls.PannelCard
                 FolderOverlay,
                 FolderOverlayPanel,
                 ShouldAnimateInteraction(),
-                completed);
+                () =>
+                {
+                    completed();
+                    IconListView?.Focus(FocusState.Programmatic);
+                });
         }
 
         private void RefreshIconListLayout()
@@ -941,6 +1079,7 @@ namespace raindesk.Control.UserControls.PannelCard
         {
             if (IconListView == null) return;
 
+            // 首次布局让容器实现，读取几何；末尾统一提交一次，避免两轮 Measure/Arrange。
             IconListView.UpdateLayout();
             for (int i = 0; i < shortcutTiles.Count; i++)
             {
@@ -1111,7 +1250,55 @@ namespace raindesk.Control.UserControls.PannelCard
         }
 
         private void RebuildShortcutTiles()
-            => _dragBusiness.RebuildShortcutTiles();
+        {
+            ApplyShortcutPanelForMode();
+            _dragBusiness.RebuildShortcutTiles();
+            // 后台预解码整表图标，滚动到任意位置时图标已就绪，不阻塞 UI 线程。
+            _iconBitmapLoader.Enqueue(shortcutTiles);
+        }
+
+        /// <summary>
+        /// 全部图标模式使用可虚拟化的 ItemsWrapGrid，普通分组模式使用
+        /// 支持手动位置与文件夹跨栏的 LauncherGridPanel。按需切换，避免
+        /// 全部图标模式下一次性实现所有容器。
+        /// </summary>
+        private void ApplyShortcutPanelForMode()
+        {
+            if (IconListView == null) return;
+
+            ItemsPanelTemplate? target = showingAllGroups ? _allGroupsPanelTemplate : _groupPanelTemplate;
+            if (target == null || ReferenceEquals(IconListView.ItemsPanel, target)) return;
+
+            // 模式切换期间抑制逐项过渡动画，避免大量 Move/Insert 触发动画风暴。
+            _shortcutTransitions.Apply(layoutAnimate: false);
+
+            try
+            {
+                IconListView.ItemsPanel = target;
+            }
+            catch (Exception ex)
+            {
+                // 运行期切换 ItemsPanel 失败时回退到旧面板，保证功能不回归。
+                LogUtil.WriteErrorLog(ex, "快捷区面板切换失败，使用旧面板继续。");
+                return;
+            }
+
+            // 面板切换后需要重新应用当前度量并强制重排。
+            // 先 UpdateLayout 让新面板实例化，再应用度量。
+            DispatcherQueue.TryEnqueue(() =>
+            {
+                if (IconListView == null) return;
+                IconListView.UpdateLayout();
+                double width = GetShortcutAvailableWidth();
+                if (width > 0d && IconListView.ItemsPanelRoot is Panel panel)
+                {
+                    LauncherShortcutPanelMetricsAdapter.Apply(panel, ShortcutLayoutCalculator.Calculate(width));
+                    LauncherShortcutPanelMetricsAdapter.Invalidate(panel);
+                }
+                IconListView.UpdateLayout();
+                _layoutApply.Schedule();
+            });
+        }
 
         private bool UsesManualLiveDragYieldAnimation()
             => _dragBusiness.UsesManualLiveDragYieldAnimation();
@@ -1185,7 +1372,7 @@ namespace raindesk.Control.UserControls.PannelCard
 
             var trailingIcons = new List<IconInfo>();
             var trailingPositions = new Dictionary<IconInfo, Point>();
-            if (!appData.AppConfig.PMModel && IconListView != null)
+            if (IconListView != null)
             {
                 IconListView.UpdateLayout();
                 for (int i = insertIndex + 1; i < shortcutTiles.Count; i++)
@@ -1203,7 +1390,7 @@ namespace raindesk.Control.UserControls.PannelCard
 
             _batchDragPlaceholders.ApplyRestore(shortcutTiles, restorePlan);
 
-            if (!appData.AppConfig.PMModel && orderedIcons.Count > 0 && IconListView != null)
+            if (orderedIcons.Count > 0 && IconListView != null)
             {
                 var iconsSnapshot = orderedIcons.ToList();
                 var trailingSnapshot = trailingIcons.ToList();
@@ -1543,6 +1730,17 @@ namespace raindesk.Control.UserControls.PannelCard
                 resolvedIndex,
                 0,
                 Math.Max(0, shortcutTiles.Count - 1));
+            if (targetIndex != _singleIconDragPreview.TargetIndex)
+            {
+                raindesk.Util.LogUtil.WriteLog(
+                    $"[dragTarget] resolved={resolvedIndex} target={targetIndex} count={shortcutTiles.Count} cur={shortcutTiles.IndexOf(_draggedIcon)}");
+            }
+            if (Environment.TickCount64 - _lastDragTargetLogTick > 400)
+            {
+                _lastDragTargetLogTick = Environment.TickCount64;
+                raindesk.Util.LogUtil.WriteLog(
+                    $"[dragTick] resolved={resolvedIndex} target={targetIndex} hasPreview={hasPreview} cur={shortcutTiles.IndexOf(_draggedIcon)} pointerOK={MainWindow.mainWindow?.DragOverlayCanvasHost != null}");
+            }
             // Inline UpdateSingleIconReorderPreviewTarget
             if (!TryStabilizeSingleIconReorderTarget(targetIndex)) return;
             int currentIndex = shortcutTiles.IndexOf(_draggedIcon);
@@ -1553,7 +1751,7 @@ namespace raindesk.Control.UserControls.PannelCard
                     _singleIconDragPreview.CommitTarget(targetIndex);
                     // Inline PreviewSingleIconLiveYield
                     if (!_isCustomDragActive || _draggedIcon == null || _draggedIcons.Count != 1
-                        || _draggedIconsSuppressedFromTiles || IconListView == null || appData.AppConfig.PMModel)
+                        || _draggedIconsSuppressedFromTiles || IconListView == null)
                         return;
                     int ci = shortcutTiles.IndexOf(_draggedIcon);
                     int sti = Math.Clamp(targetIndex, 0, Math.Max(0, GetTileInsertUpperBound(shortcutTiles)));
@@ -1649,6 +1847,13 @@ namespace raindesk.Control.UserControls.PannelCard
                 layout,
                 new LauncherPoint(pointer.X, pointer.Y),
                 GetTileInsertUpperBound(shortcutTiles));
+
+            if (System.Diagnostics.Debugger.IsAttached || Environment.TickCount64 - _lastDragTargetLogTick > 400)
+            {
+                _lastDragTargetLogTick = Environment.TickCount64;
+                raindesk.Util.LogUtil.WriteLog(
+                    $"[dragPtr] pointer=({pointer.X:F0},{pointer.Y:F0}) kind={preview.Kind} reorder={preview.ReorderIndex} tileLimit={GetTileInsertUpperBound(shortcutTiles)} layoutCount={layout.Count}");
+            }
 
             return true;
         }
@@ -1783,7 +1988,59 @@ namespace raindesk.Control.UserControls.PannelCard
         private void ClearFolderDropTargetHighlight()
             => _dragBusiness.ClearFolderDropTargetHighlight();
 
-        private void OpenFolder(IconInfo folder) => _folderOverlay.OpenFolder(folder);
+        private void OpenFolder(IconInfo folder)
+        {
+            _folderOverlayAnchor = folder;
+            _folderOverlay.OpenFolder(folder);
+        }
+
+        private void PositionFolderOverlayNearAnchor()
+        {
+            if (FolderPopup == null || FolderOverlayBubbleHost == null || _folderOverlayAnchor == null)
+            {
+                return;
+            }
+
+            if (IconListView.ContainerFromItem(_folderOverlayAnchor) is not ListViewItem anchorContainer)
+            {
+                FolderPopup.HorizontalOffset = Math.Max(12d, (RootGrid.ActualWidth - 440d) / 2d);
+                FolderPopup.VerticalOffset = Math.Max(12d, (RootGrid.ActualHeight - 240d) / 2d);
+                return;
+            }
+
+            Rect anchorBounds;
+            try
+            {
+                anchorBounds = anchorContainer.TransformToVisual(RootGrid)
+                    .TransformBounds(new Rect(0d, 0d, anchorContainer.ActualWidth, anchorContainer.ActualHeight));
+            }
+            catch (InvalidOperationException)
+            {
+                return;
+            }
+
+            FolderOverlayBubbleHost.Measure(new Size(double.PositiveInfinity, double.PositiveInfinity));
+            double bubbleWidth = Math.Max(FolderOverlayBubbleHost.ActualWidth, FolderOverlayBubbleHost.DesiredSize.Width);
+            double bubbleHeight = Math.Max(FolderOverlayBubbleHost.ActualHeight, FolderOverlayBubbleHost.DesiredSize.Height);
+            if (bubbleWidth <= 0d || bubbleHeight <= 0d)
+            {
+                return;
+            }
+
+            const double gap = 12d;
+            double x = anchorBounds.Right + gap;
+            double y = anchorBounds.Top + (anchorBounds.Height - bubbleHeight) / 2d;
+            FolderPopup.HorizontalOffset = x;
+            FolderPopup.VerticalOffset = y;
+        }
+
+        private void FolderPopup_Closed(object sender, object e)
+        {
+            if (folderOverlayState.IsOpen)
+            {
+                folderOverlayState.Close();
+            }
+        }
         private void CloseFolderOverlay() => _folderOverlay.Close();
         private void CloseFolderOverlayClick(object sender, RoutedEventArgs e) => _folderOverlay.HandleCloseClick(sender, e);
         private void FolderOverlay_BackdropTapped(object sender, TappedRoutedEventArgs e) => _folderOverlay.HandleBackdropTapped(sender, e);
@@ -1833,7 +2090,7 @@ namespace raindesk.Control.UserControls.PannelCard
                     Overlay = overlay!,
                     CaptureWidth = LauncherShortcutDragPreviewSize,
                     CaptureHeight = LauncherShortcutDragPreviewSize,
-                    AnimatePreview = !appData.AppConfig.PMModel,
+                    AnimatePreview = true,
                     DragCount = 1
                 };
                 _ = StartIconDragPreviewAsync(previewRequest);
@@ -2230,15 +2487,11 @@ namespace raindesk.Control.UserControls.PannelCard
             IconInfo iconInfo = LauncherVisualTreeHelper.GetIconInfoFromSender(sender);
             if (iconInfo == null) return;
             if (iconInfo.IsAddShortcut_NoWrite) return;
-
-            HoverAnimationHelper.ApplyHoverScale(sender, 1.08, 120, appData.AppConfig.PMModel);
         }
 
         private void MenuIcon_PointerExited(object sender, PointerRoutedEventArgs e)
         {
             RunTimeStatus.MOUSE_ENTER_ICON = false;
-
-            HoverAnimationHelper.ApplyHoverScale(sender, 1, 180, appData.AppConfig.PMModel);
         }
 
         /// <summary>
@@ -2321,7 +2574,17 @@ namespace raindesk.Control.UserControls.PannelCard
         }
 
         private void InlineSystemTabs_SelectionChanged(object sender, SelectionChangedEventArgs e)
-            => _inlineAddPanel.HandleInlineSystemTabsSelectionChanged(sender, e, BuildInlineAddPanelViews());
+        {
+            _inlineAddPanel.HandleInlineSystemTabsSelectionChanged(sender, e, BuildInlineAddPanelViews());
+            UpdateInlineSystemAddMode();
+        }
+
+        private void UpdateInlineSystemAddMode()
+        {
+            if (InlineSystemItems == null) return;
+            bool isStartMenu = (InlineSystemTabs?.SelectedItem as TabViewItem)?.Tag?.ToString() == "StartMenu";
+            InlineSystemItems.RequireAddConfirmation = isStartMenu;
+        }
 
         private void LoadInlineSystemItems()
         {
@@ -2329,6 +2592,7 @@ namespace raindesk.Control.UserControls.PannelCard
             if (InlineSystemPanel == null || InlineSystemPanel.Visibility != Visibility.Visible) return;
             var views = BuildInlineAddPanelViews();
             _inlineAddPanel.HandleInlineSystemTabsSelectionChanged(this, null!, views);
+            UpdateInlineSystemAddMode();
         }
 
         private void InlineSystemSearchBox_TextChanged(object sender, TextChangedEventArgs e)
@@ -2390,6 +2654,13 @@ namespace raindesk.Control.UserControls.PannelCard
             {
                 CardLockCM.Text = "锁定主面板";
             }
+
+            TopBarVisibilityMenuItem.Text = MainWindow.mainWindow?.IsTopBarCollapsedForContextMenu == true
+                ? "展开顶部栏"
+                : "收缩顶部栏";
+            GroupBarVisibilityMenuItem.Text = _isGroupBarExpanded
+                ? "收缩分组栏"
+                : "展开分组栏";
         }
 
 
@@ -2437,6 +2708,17 @@ namespace raindesk.Control.UserControls.PannelCard
             IconInfo? icon = LauncherVisualTreeHelper.GetIconInfoFromSender(sender);
             if (icon != null)
             {
+                var pointerPoint = e.GetCurrentPoint(null);
+                if (pointerPoint.Properties.IsLeftButtonPressed)
+                {
+                    _contextMenuHandler.RecordIconPointerPress(icon);
+                    if (icon.IsFolder)
+                    {
+                        _pressedFolder = icon;
+                        _pressedFolderOrigin = pointerPoint.Position;
+                        _pressedFolderPointerId = e.Pointer.PointerId;
+                    }
+                }
                 _iconSelection.HandleItemPointerPressed(
                     icon,
                     e,
@@ -2618,7 +2900,7 @@ namespace raindesk.Control.UserControls.PannelCard
             ImageUtil.EnsureIconBitmap(_draggedIcon);
             double captureWidth = LauncherShortcutDragPreviewSize;
             double captureHeight = LauncherShortcutDragPreviewSize;
-            bool animatePreview = !appData.AppConfig.PMModel;
+            bool animatePreview = true;
             var overlay = MainWindow.mainWindow?.DragOverlayCanvasHost;
             ImageSource? iconSource = _draggedIcon.BitmapImage_NoWrite ?? _draggedIcon.BitmapImage;
 
@@ -2641,6 +2923,7 @@ namespace raindesk.Control.UserControls.PannelCard
                 _dragOrchestrator.RegisterSystemDragVisualSuppression(
                     IconListView,
                     MainWindow.mainWindow?.Content as UIElement);
+                // 一次性布局：让占位符容器实现后应用状态，避免同一路径两次强制布局。
                 IconListView?.UpdateLayout();
                 foreach (IconInfo icon in _draggedIcons)
                 {
@@ -2653,7 +2936,6 @@ namespace raindesk.Control.UserControls.PannelCard
                     _batchDragPlaceholders.RestrictDragItemsToPrimaryPlaceholder(e.Items);
                 }
                 _shortcutTransitions.Apply();
-                IconListView?.UpdateLayout();
                 RestoreVisibleShortcutContainerState();
                 EnsureBatchDragPlaceholderContainerVisible();
             }
@@ -2783,26 +3065,7 @@ namespace raindesk.Control.UserControls.PannelCard
         }
 
         private static BitmapImage GetEmptyDragBitmapImage()
-        {
-            if (_emptyDragBitmapImage != null) return _emptyDragBitmapImage;
-
-            byte[] png = Convert.FromBase64String(
-                "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==");
-            var stream = new InMemoryRandomAccessStream();
-            using (var output = stream.GetOutputStreamAt(0))
-            using (var writer = new DataWriter(output))
-            {
-                writer.WriteBytes(png);
-                writer.StoreAsync().AsTask().GetAwaiter().GetResult();
-                writer.FlushAsync().AsTask().GetAwaiter().GetResult();
-            }
-
-            stream.Seek(0);
-            var bitmap = new BitmapImage();
-            bitmap.SetSource(stream);
-            _emptyDragBitmapImage = bitmap;
-            return _emptyDragBitmapImage;
-        }
+            => LauncherDragImageFactory.GetEmptyDragBitmapImage();
 
         private void UpdateDragPreviewFromDragEvent(DragEventArgs e)
         {
@@ -2916,6 +3179,20 @@ namespace raindesk.Control.UserControls.PannelCard
                 FinalizeBatchPlaceholderBlockPosition("block finalized on drag completed");
             }
 
+            // 松手时立即锁定最终命中位置。稳定预览有短暂延迟，快速拖放时它可能
+            // 仍停留在源索引；而 EndDragPointerTracking 会清除用于重新命中的指针。
+            int finalSingleIconDropIndex = -1;
+            if (!committedFolderDrop
+                && !committedCrossGroupDrop
+                && !batchBlockDrag
+                && !_isCrossGroupDrag
+                && !_draggedIconsSuppressedFromTiles
+                && _draggedIcons.Count == 1
+                && _draggedIcon != null)
+            {
+                finalSingleIconDropIndex = GetShortcutDropIndexFromPointer(_draggedIcon);
+            }
+
             EndDragPointerTracking();
             MainWindow.mainWindow?.SetIconDragActive(false);
             IconInfo? droppedIcon = _draggedIcon;
@@ -2928,7 +3205,7 @@ namespace raindesk.Control.UserControls.PannelCard
                 dropTarget = GetIconContainerWindowOrigin(droppedIcon);
             }
 
-            bool animate = _isCustomDragActive && !appData.AppConfig.PMModel;
+            bool animate = _isCustomDragActive;
 
             var draggedIconsSnapshot = _draggedIcons.ToList();
             void CompleteReorder()
@@ -2969,9 +3246,11 @@ namespace raindesk.Control.UserControls.PannelCard
                         int curIdx = shortcutTiles.IndexOf(droppedIcon);
                         if (curIdx >= 0)
                         {
-                            int tgtIdx = _singleIconDragPreview.TargetIndex >= 0
-                                ? _singleIconDragPreview.TargetIndex
-                                : GetShortcutDropIndexFromPointer(droppedIcon);
+                            int tgtIdx = finalSingleIconDropIndex >= 0
+                                ? finalSingleIconDropIndex
+                                : (_singleIconDragPreview.TargetIndex >= 0
+                                    ? _singleIconDragPreview.TargetIndex
+                                    : curIdx);
                             tgtIdx = Math.Clamp(tgtIdx, 0, Math.Max(0, shortcutTiles.Count - 1));
 
                             if (tgtIdx != curIdx)
@@ -3104,10 +3383,14 @@ namespace raindesk.Control.UserControls.PannelCard
                         int curIdx = shortcutTiles.IndexOf(droppedIcon);
                         if (curIdx >= 0)
                         {
-                            int tgtIdx = _singleIconDragPreview.TargetIndex >= 0
-                                ? _singleIconDragPreview.TargetIndex
-                                : GetShortcutDropIndexFromPointer(droppedIcon);
+                            int tgtIdx = finalSingleIconDropIndex >= 0
+                                ? finalSingleIconDropIndex
+                                : (_singleIconDragPreview.TargetIndex >= 0
+                                    ? _singleIconDragPreview.TargetIndex
+                                    : curIdx);
                             tgtIdx = Math.Clamp(tgtIdx, 0, Math.Max(0, shortcutTiles.Count - 1));
+                            raindesk.Util.LogUtil.WriteLog(
+                                $"[dropMove] cur={curIdx} tgt={tgtIdx} count={shortcutTiles.Count} liveTarget={_singleIconDragPreview.TargetIndex}");
                             if (tgtIdx != curIdx) shortcutTiles.Move(curIdx, tgtIdx);
                         }
                     }
@@ -3137,6 +3420,7 @@ namespace raindesk.Control.UserControls.PannelCard
                 }
 
                 LogIconDragState("completed-clean");
+                DispatcherQueue.TryEnqueue(() => IconListView?.Focus(FocusState.Programmatic));
             }
 
             if (_isCustomDragActive && _dragPreviewController.HasPreview)
@@ -3230,12 +3514,12 @@ namespace raindesk.Control.UserControls.PannelCard
                 && args.Item is IconInfo phaseIcon
                 && LauncherDragIconClassifier.IsDataShortcutIcon(phaseIcon))
             {
-                ImageUtil.EnsureIconBitmap(phaseIcon);
+                _iconBitmapLoader.Enqueue(new[] { phaseIcon });
                 if (phaseIcon.IsFolder)
                 {
                     foreach (IconInfo child in phaseIcon.FolderItems.Take(6))
                     {
-                        ImageUtil.EnsureIconBitmap(child);
+                        _iconBitmapLoader.Enqueue(new[] { child });
                     }
                 }
                 args.RegisterUpdateCallback(IconListView_ContainerContentChanging);
@@ -3700,11 +3984,13 @@ namespace raindesk.Control.UserControls.PannelCard
             int delta = e.GetCurrentPoint(scrollViewer).Properties.MouseWheelDelta;
             if (delta == 0) return;
 
-            double targetOffset = scrollViewer.HorizontalOffset - delta;
+            // 分组标签为垂直排列列表，滚轮应驱动垂直滚动；
+            // 水平滚动被禁用时不能用 HorizontalOffset。
+            double targetOffset = scrollViewer.VerticalOffset - delta;
             if (targetOffset < 0) targetOffset = 0;
-            if (targetOffset > scrollViewer.ScrollableWidth) targetOffset = scrollViewer.ScrollableWidth;
+            if (targetOffset > scrollViewer.ScrollableHeight) targetOffset = scrollViewer.ScrollableHeight;
 
-            scrollViewer.ChangeView(targetOffset, null, null, true);
+            scrollViewer.ChangeView(null, targetOffset, null, true);
             e.Handled = true;
         }
 
@@ -3729,10 +4015,29 @@ namespace raindesk.Control.UserControls.PannelCard
             => _groupTabEdit.HandleEditGroupGeometryClick(sender, e);
 
         private void RenameGroupClick(object sender, RoutedEventArgs e)
-            => _groupTabEdit.HandleRenameGroupClick(sender, e, GroupListView, DispatcherQueue);
+        {
+            EnsureGroupBarExpandedForEditing();
+            _groupTabEdit.HandleRenameGroupClick(sender, e, GroupListView, DispatcherQueue);
+        }
 
         private void BeginGroupInlineEdit(MenuInfo menuInfo)
-            => _groupTabEdit.BeginGroupInlineEdit(menuInfo, GroupListView, DispatcherQueue);
+        {
+            EnsureGroupBarExpandedForEditing();
+            _groupTabEdit.BeginGroupInlineEdit(menuInfo, GroupListView, DispatcherQueue);
+        }
+
+        private void EnsureGroupBarExpandedForEditing()
+        {
+            if (_isGroupBarExpanded)
+            {
+                return;
+            }
+
+            _isGroupBarExpanded = true;
+            ApplyGroupBarDisplayStateToRealizedItems();
+            ApplyGroupSelectionIndicatorDisplayState();
+            RefreshGroupTabNaturalWidths();
+        }
 
         private void FocusInlineGroupEditor(MenuInfo menuInfo)
             => _groupTabEdit.FocusInlineGroupEditor(menuInfo, GroupListView, DispatcherQueue);
@@ -3806,7 +4111,9 @@ namespace raindesk.Control.UserControls.PannelCard
             }
             RefreshGroupSelectionState(-1);
             RebuildShortcutTiles();
+            AnimateGroupSwitch();
             UpdateIconReorderEnabled();
+            DispatcherQueue.TryEnqueue(() => IconListView?.Focus(FocusState.Programmatic));
         }
 
         private void EnsureWritableGroupSelected()
@@ -3877,9 +4184,79 @@ namespace raindesk.Control.UserControls.PannelCard
                 appData.AppConfig.SelectedMenuIcons = menu.IconList;
                 AttachSelectedIcons(menu.IconList);
                 RebuildShortcutTiles();
+                AnimateGroupSwitch();
             }
 
             UpdateIconReorderEnabled();
+            if (!menu.IsEncrypt)
+            {
+                DispatcherQueue.TryEnqueue(() => IconListView?.Focus(FocusState.Programmatic));
+            }
+        }
+
+        private void AnimateGroupSwitch()
+        {
+            if (IconListView == null || !ShouldAnimateInteraction())
+            {
+                if (IconListView != null)
+                {
+                    IconListView.Opacity = 1d;
+                    IconListView.RenderTransform = null;
+                }
+                return;
+            }
+
+            var translate = new TranslateTransform { Y = 6d };
+            IconListView.RenderTransform = translate;
+            IconListView.Opacity = 0.72d;
+
+            var easing = new CubicEase { EasingMode = EasingMode.EaseOut };
+            var fade = new DoubleAnimation
+            {
+                To = 1d,
+                Duration = TimeSpan.FromMilliseconds(180),
+                EasingFunction = easing
+            };
+            var settle = new DoubleAnimation
+            {
+                To = 0d,
+                Duration = TimeSpan.FromMilliseconds(180),
+                EasingFunction = easing
+            };
+            Storyboard.SetTarget(fade, IconListView);
+            Storyboard.SetTargetProperty(fade, nameof(UIElement.Opacity));
+            Storyboard.SetTarget(settle, translate);
+            Storyboard.SetTargetProperty(settle, nameof(TranslateTransform.Y));
+
+            var storyboard = new Storyboard();
+            storyboard.Children.Add(fade);
+            storyboard.Children.Add(settle);
+            storyboard.Begin();
+        }
+
+        private void Icon_PointerReleased(object sender, PointerRoutedEventArgs e)
+        {
+            IconInfo? icon = _pressedFolder;
+            if (_pressedFolder == null
+                || icon == null
+                || e.Pointer.PointerId != _pressedFolderPointerId)
+            {
+                _pressedFolder = null;
+                return;
+            }
+
+            Point releasedAt = e.GetCurrentPoint(null).Position;
+            double dx = releasedAt.X - _pressedFolderOrigin.X;
+            double dy = releasedAt.Y - _pressedFolderOrigin.Y;
+            bool isClick = dx * dx + dy * dy <= 36d && !_isCustomDragActive;
+            _pressedFolder = null;
+            if (!isClick)
+            {
+                return;
+            }
+
+            OpenFolder(icon);
+            e.Handled = true;
         }
 
         private void NotifyShortcutLayoutScopeChanged()

@@ -13,6 +13,11 @@ public sealed class LauncherGridPanel : Panel
     private const double DefaultItemHeight = 94d;
     private readonly Dictionary<UIElement, INotifyPropertyChanged> trackedChildNotifications = new();
 
+    // 布局缓存：同一布局签名下复用 LauncherGridLayoutEngine.Arrange 的结果，
+    // 避免 Measure/Arrange 每次 pass 都重复进行 O(n * 槽位) 的排列计算。
+    private long _cachedLayoutSignature;
+    private Dictionary<object, LauncherGridRect>? _cachedLayout;
+
     public static readonly DependencyProperty ColumnCountProperty =
         DependencyProperty.Register(
             nameof(ColumnCount),
@@ -136,6 +141,7 @@ public sealed class LauncherGridPanel : Panel
 
         var items = new List<LauncherGridItem>(Children.Count);
         var currentChildren = new HashSet<UIElement>();
+        long signature = HashCode.Combine(columnCount, itemWidth, itemHeight, UseManualPositions);
         foreach (UIElement child in Children)
         {
             if (!CanLayoutChild(child))
@@ -156,10 +162,28 @@ public sealed class LauncherGridPanel : Panel
                     icon.LauncherGridColumn,
                     icon.LauncherGridRow)
                 : new LauncherGridItem(child, columnSpan, rowSpan));
+            signature = HashCode.Combine(
+                signature,
+                child.GetHashCode(),
+                icon?.GetHashCode() ?? 0,
+                columnSpan,
+                rowSpan,
+                UseManualPositions && icon?.HasManualLauncherGridPosition_NoWrite == true
+                    ? HashCode.Combine(icon.LauncherGridColumn, icon.LauncherGridRow)
+                    : 0);
         }
 
         UntrackRemovedChildren(currentChildren);
-        return LauncherGridLayoutEngine.Arrange(items, metrics);
+
+        if (_cachedLayout != null && _cachedLayoutSignature == signature)
+        {
+            return _cachedLayout;
+        }
+
+        Dictionary<object, LauncherGridRect> layout = LauncherGridLayoutEngine.Arrange(items, metrics);
+        _cachedLayout = layout;
+        _cachedLayoutSignature = signature;
+        return layout;
     }
 
     private static bool CanMeasureChild(UIElement? child)
@@ -256,7 +280,8 @@ public sealed class LauncherGridPanel : Panel
             return Math.Max(1, icon.DragPlaceholderColumnSpan_NoWrite);
         }
 
-        return icon?.IsFolder == true ? Math.Max(1, icon.FolderColumnSpan_NoWrite) : 1;
+        // 文件夹与普通图标统一使用单格，避免不同分组出现两套尺寸。
+        return 1;
     }
 
     private static int GetShortcutRowSpan(IconInfo? icon)
@@ -266,7 +291,7 @@ public sealed class LauncherGridPanel : Panel
             return Math.Max(1, icon.DragPlaceholderRowSpan_NoWrite);
         }
 
-        return icon?.IsFolder == true ? Math.Max(1, icon.FolderRowSpan_NoWrite) : 1;
+        return 1;
     }
 
     private void TrackChildIcon(UIElement child, IconInfo? icon)

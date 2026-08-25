@@ -1,0 +1,275 @@
+param(
+    [string]$Root = (Resolve-Path (Join-Path $PSScriptRoot '..')).Path
+)
+
+$ErrorActionPreference = 'Stop'
+$failures = New-Object System.Collections.Generic.List[string]
+
+function Read-RepoFile([string]$relativePath) {
+    $path = Join-Path $Root $relativePath
+    if (-not (Test-Path -LiteralPath $path)) {
+        $failures.Add("Missing file: $relativePath")
+        return ''
+    }
+
+    return Get-Content -LiteralPath $path -Raw
+}
+
+function Assert-Contains([string]$content, [string]$pattern, [string]$message) {
+    if ($content -notmatch $pattern) {
+        $failures.Add($message)
+    }
+}
+
+function Assert-NotContains([string]$content, [string]$pattern, [string]$message) {
+    if ($content -match $pattern) {
+        $failures.Add($message)
+    }
+}
+
+$registerUtil = Read-RepoFile 'raindesk\Util\RegisterUtil.cs'
+Assert-NotContains $registerUtil 'SetAutoStart\(bool enable\)\s*\{\s*\}' 'RegisterUtil.SetAutoStart is still a stub.'
+Assert-NotContains $registerUtil 'SetSelfStartinging\(bool enable, string appName\)\s*\{\s*\}' 'RegisterUtil.SetSelfStartinging is still a stub.'
+Assert-Contains $registerUtil 'CurrentVersion\\Run' 'RegisterUtil must write HKCU Run startup entries.'
+Assert-Contains $registerUtil 'IsAutoStart' 'RegisterUtil must expose startup state.'
+
+$httpUtil = Read-RepoFile 'raindesk\Util\HttpUtil.cs'
+Assert-NotContains $httpUtil 'Get\(string url\)\s*=>\s*""' 'HttpUtil.Get is still a stub.'
+Assert-NotContains $httpUtil 'Post\(string url, string data\)\s*=>\s*""' 'HttpUtil.Post is still a stub.'
+Assert-Contains $httpUtil 'HttpClient|WebRequest|HttpWebRequest' 'HttpUtil must perform real HTTP requests.'
+
+$mainWindow = Read-RepoFile 'raindesk\MainWindow.xaml.cs'
+Assert-NotContains $mainWindow 'RegisterCreateToDoHotKey\(bool showMsg\)\s*\{\s*\}' 'MainWindow.RegisterCreateToDoHotKey is still a stub.'
+Assert-Contains $mainWindow 'ToDoWindow\.Show' 'Todo hotkey must open the todo window.'
+Assert-NotContains $mainWindow 'ConfigWindow\.Show' 'Settings entry must render inline in the main window instead of opening ConfigWindow.'
+Assert-NotContains $mainWindow 'private void BacklogMenuClick[\s\S]*?ToDoWindow\.Show\(\)' 'Clicked todo entry must render inline in the main window instead of opening ToDoWindow.'
+Assert-Contains $mainWindow 'ShowInlineConfigPanel' 'MainWindow must expose an inline settings panel entry.'
+Assert-Contains $mainWindow 'ShowInlineTodoPanel' 'MainWindow must expose an inline todo panel entry.'
+Assert-Contains $mainWindow 'ShowRail\(\)' 'MainWindow must keep the global navigation rail visible.'
+Assert-NotContains $mainWindow 'CollapseRail|ExpandRailClick|ExpandRail\(' 'MainWindow must not hide the global navigation rail behind an expand button.'
+Assert-Contains $mainWindow 'ConfigureWindowChrome' 'MainWindow must configure custom window chrome.'
+Assert-Contains $mainWindow 'SetBorderAndTitleBar\(true,\s*false\)' 'MainWindow must hide the native title bar.'
+Assert-Contains $mainWindow 'ExtendsContentIntoTitleBar\s*=\s*true' 'MainWindow must use WinUI system custom title bar support.'
+Assert-Contains $mainWindow 'InputNonClientPointerSource\.GetForWindowId\(AppWindow\.Id\)' 'MainWindow must use WinAppSDK system non-client title bar regions.'
+Assert-Contains $mainWindow 'NonClientRegionKind\.Caption' 'MainWindow must register a system caption drag region.'
+Assert-Contains $mainWindow 'NonClientRegionKind\.Passthrough' 'MainWindow must keep title bar controls interactive through passthrough regions.'
+Assert-NotContains $mainWindow 'TitleDragRegionPointer|SendMessage\(hwnd|ReleaseCapture\(|WM_NCHITTEST|HTCAPTION|_isDraggingWindow|AppWindow\.Move|SetTitleBar\(' 'MainWindow must not hand-roll, Win32-simulate, or use the old click-first title bar drag path.'
+Assert-Contains $mainWindow 'ShowInlineConfigPanel[\s\S]*?LeftCard\.Visibility\s*=\s*Visibility\.Collapsed' 'Inline settings must hide the middle menu card.'
+Assert-Contains $mainWindow 'ShowInlineTodoPanel[\s\S]*?LeftCard\.Visibility\s*=\s*Visibility\.Collapsed' 'Inline todo must hide the middle menu card.'
+Assert-Contains $mainWindow 'LeftColumn\.Width\s*=\s*new GridLength\(0\)' 'Inline work panels must collapse the middle menu column.'
+Assert-Contains $mainWindow 'LeftColumn\.Width\s*=\s*new GridLength\(0\)' 'Home view should keep the old middle menu column hidden.'
+Assert-NotContains $mainWindow 'FindName\(nameof\(InlineConfigPanel\)\)|FindName\(nameof\(ConfigPanel\)\)|FindName\(nameof\(InlineTodoPanel\)\)|FindName\(nameof\(TodoPanel\)\)' 'Inline panels must be present and hidden with Visibility instead of lazy-loaded with FindName.'
+
+$mainWindowXaml = Read-RepoFile 'raindesk\MainWindow.xaml'
+Assert-Contains $mainWindowXaml 'Grid.Row="0"[\s\S]*?Background="Transparent"' 'Top bar should not draw a separate band over the page background.'
+Assert-Contains $mainWindowXaml 'x:Name="TopBarHost"' 'MainWindow must expose the top bar host for system non-client caption regions.'
+Assert-NotContains $mainWindowXaml 'x:Name="WindowTitleBarDragArea"' 'MainWindow must not keep the old SetTitleBar drag overlay.'
+Assert-NotContains $mainWindowXaml 'PointerPressed="TitleDragRegionPointerPressed"|PointerMoved="TitleDragRegionPointerMoved"|PointerReleased="TitleDragRegionPointerReleased"' 'MainWindow top bar drag must be handled by system non-client caption regions.'
+Assert-Contains $mainWindowXaml 'Background="Transparent"' 'Global rail should not draw a hard panel over the page background.'
+Assert-Contains $mainWindowXaml 'x:Name="PageCloseButton"[\s\S]*?Click="CloseButtonClick"' 'MainWindow must render one page-level close button.'
+Assert-Contains $mainWindowXaml 'x:Name="PageCloseButton"[\s\S]*?Glyph="&#xE711;"' 'MainWindow close button must use a close icon.'
+Assert-Contains $mainWindowXaml 'InlineConfigPanel' 'MainWindow must contain an inline settings panel.'
+Assert-Contains $mainWindowXaml 'InlineTodoPanel' 'MainWindow must contain an inline todo panel.'
+Assert-Contains $mainWindowXaml 'ConfigPanel' 'MainWindow must host ConfigPanel inline.'
+Assert-Contains $mainWindowXaml 'TodoPanel' 'MainWindow must host TodoPanel inline.'
+Assert-Contains $mainWindowXaml 'AppRail' 'MainWindow must keep the left global navigation rail.'
+Assert-NotContains $mainWindowXaml 'RailExpandButton' 'Global navigation rail should stay visible without an expand button.'
+Assert-Contains $mainWindowXaml 'x:Name="RailColumn"[\s\S]*?Width="78"' 'Global navigation rail must be visible by default.'
+Assert-NotContains $mainWindowXaml '<Border x:Name="AppRail"[^>]*Visibility="Collapsed"' 'Global navigation rail must not be hidden by default.'
+Assert-NotContains $mainWindowXaml 'Glyph="&#xE77B;"' 'Global navigation rail must not render the bottom profile icon.'
+Assert-Contains $mainWindowXaml 'Text="首页"' 'Global navigation rail must keep Home.'
+Assert-Contains $mainWindowXaml 'Text="待办"' 'Global navigation rail must keep Todo.'
+Assert-Contains $mainWindowXaml 'Text="设置"' 'Global navigation rail must keep Settings.'
+Assert-NotContains $mainWindowXaml 'Text="应用"|Text="工具箱"|Text="插件"|Text="主题"' 'Global navigation rail must only keep Home, Todo, and Settings.'
+Assert-NotContains $mainWindowXaml 'x:Name="SettingButton"|MenuFlyoutItem Text="设置"|MenuFlyoutItem Text="待办"|Grid\.Column="2"[^>]*Click="BacklogMenuClick"' 'Top-right todo and settings entries must be removed.'
+Assert-Contains $mainWindowXaml 'x:Name="LeftCard"[\s\S]*?Visibility="Collapsed"' 'The old left menu card should be hidden on the home view.'
+Assert-NotContains $mainWindowXaml 'x:Name="LeftCard"[\s\S]*?x:Load="False"|x:Name="InlineConfigPanel"[\s\S]*?x:Load="False"|x:Name="InlineTodoPanel"[\s\S]*?x:Load="False"' 'Main work panels must not use x:Load=False because settings/todo clicks access their fields directly.'
+Assert-Contains $mainWindowXaml 'x:Name="RightCard"[\s\S]*?Grid\.Column="1"[\s\S]*?Grid\.ColumnSpan="2"' 'Home shortcut panel should span the freed middle column and right work area.'
+Assert-Contains $mainWindowXaml 'x:Name="RightCard"[\s\S]*?Margin="8,6,18,14"' 'Home shortcut panel should sit closer to the top.'
+Assert-Contains $mainWindowXaml 'Grid\.Column="1"[\s\S]*?x:Name="InlineConfigPanel"|x:Name="InlineConfigPanel"[\s\S]*?Grid\.Column="1"' 'Inline settings must render from the middle work column after hiding the menu card.'
+Assert-Contains $mainWindowXaml 'InlineConfigPanel"[\s\S]*?Grid\.ColumnSpan="2"' 'Inline settings must span the freed middle column and right work area.'
+Assert-Contains $mainWindowXaml 'x:Name="LeftColumn"[\s\S]*?Width="0"' 'Middle menu column should be hidden by default.'
+
+$leftCardXaml = Read-RepoFile 'raindesk\Control\UserControls\PannelCard\LeftCardControl.xaml'
+Assert-Contains $leftCardXaml 'Background="#82FBFDFF"' 'Left menu card should allow the page background to show through.'
+Assert-Contains $leftCardXaml 'x:Name="MyCard"[\s\S]*?BorderBrush="Transparent"[\s\S]*?BorderThickness="0"' 'Left menu card should not draw a visible outline over the background.'
+Assert-NotContains $leftCardXaml 'ToDoList\.Count' 'Left menu card must not show the todo count block.'
+Assert-NotContains $leftCardXaml 'MenuList\.Count' 'Left menu card must not show the menu count block.'
+Assert-NotContains $leftCardXaml 'Text="菜单"' 'Left menu card must not show the menu counter title.'
+Assert-Contains $leftCardXaml 'Width="108"' 'Left menu rows should use the compact row width.'
+Assert-Contains $leftCardXaml 'TextAlignment="Center"' 'Compact left menu text should be centered to avoid looking clipped.'
+Assert-Contains $leftCardXaml 'RowDefinition Height="34"' 'Left menu rows should use a tight compact row height.'
+Assert-Contains $leftCardXaml 'LineHeight="20"' 'Left menu text should have enough line height to avoid visual overlap.'
+Assert-Contains $leftCardXaml 'FontSize="14"' 'Left menu text size should remain unchanged.'
+Assert-NotContains $leftCardXaml 'SelectedTextBlock' 'Left menu selected item must not render a duplicate text layer.'
+
+$configPanelXaml = Read-RepoFile 'raindesk\Control\UserControls\Config\ConfigPanel.xaml'
+Assert-NotContains $configPanelXaml 'Tag="About"|Text="关于"' 'ConfigPanel must not render the About tab.'
+Assert-Contains $configPanelXaml 'Tag="Theme"' 'ConfigPanel must keep the display settings navigation item.'
+Assert-Contains $configPanelXaml 'Tag="Motion"' 'ConfigPanel must keep the motion navigation item.'
+Assert-Contains $configPanelXaml 'Tag="Other"' 'ConfigPanel must keep the other settings navigation item.'
+Assert-Contains $configPanelXaml 'ItemsStackPanel Orientation="Horizontal"' 'ConfigPanel settings navigation must use a top horizontal tab layout.'
+Assert-Contains $configPanelXaml 'SelectedIndex="0"' 'Inline settings must select the first visible settings tab.'
+Assert-NotContains $configPanelXaml 'Text="设置"[\s\S]*?FontSize="18"' 'ConfigPanel must not render a duplicate settings title in the tab header.'
+Assert-Contains $configPanelXaml 'x:Name="RootGlass"' 'ConfigPanel must expose a root glass surface for the settings acrylic backdrop.'
+Assert-Contains $configPanelXaml 'x:Name="GlassTint"[\s\S]*?LinearGradientBrush' 'ConfigPanel must keep a subtle glass tint layer over the acrylic backdrop.'
+
+$commonThemeXaml = Read-RepoFile 'raindesk\Resource\Dictionary\CommonTheme.xaml'
+Assert-Contains $commonThemeXaml 'ResourceDictionary.ThemeDictionaries' 'CommonTheme must define theme dictionaries.'
+Assert-Contains $commonThemeXaml 'x:Key="Dark"[\s\S]*?AppBackgroundBrush' 'CommonTheme must define dark semantic brushes.'
+
+$configPanelCode = Read-RepoFile 'raindesk\Control\UserControls\Config\ConfigPanel.xaml.cs'
+Assert-NotContains $configPanelCode 'AboutControl|ShowPanel\("About"\)' 'ConfigPanel must not load the About page.'
+Assert-Contains $configPanelCode 'ShowPanel\("Theme"\)' 'ConfigPanel must open display settings by default.'
+Assert-Contains $configPanelCode 'new MotionControl\(\)' 'ConfigPanel must be able to open motion settings.'
+Assert-Contains $configPanelCode '\?\?=' 'ConfigPanel must lazy-load settings pages instead of constructing every page during startup.'
+Assert-NotContains $configPanelCode 'about = new AboutControl\(\);[\s\S]*theme = new ThemeControl\(\);[\s\S]*motion = new MotionControl\(\);[\s\S]*other = new OtherControl\(\);' 'ConfigPanel must not eagerly construct all settings pages.'
+Assert-Contains $configPanelCode 'AcrylicBrush[\s\S]*?AlwaysUseFallback\s*=\s*false' 'ConfigPanel must implement the settings glass effect with a real WinUI acrylic brush.'
+Assert-Contains $configPanelCode 'TintLuminosityOpacity' 'ConfigPanel acrylic brush must include luminosity opacity for a visible glass effect.'
+Assert-Contains $configPanelCode 'PropertyChanged \+= Config_PropertyChanged' 'ConfigPanel must listen for BlurEffect changes.'
+Assert-Contains $configPanelCode 'nameof\(AppConfig\.BlurEffect\)' 'ConfigPanel glass backdrop must react to the BlurEffect setting.'
+
+$todoPanelXaml = Read-RepoFile 'raindesk\Control\UserControls\ToDo\TodoPanel.xaml'
+Assert-Contains $todoPanelXaml '待办列表' 'Inline todo panel must keep the active todo list tab.'
+Assert-Contains $todoPanelXaml '历史待办' 'Inline todo panel must keep the history todo tab.'
+Assert-NotContains $todoPanelXaml 'Text="待办"[\s\S]*?FontSize="18"' 'TodoPanel must not render a duplicate todo title in the tab header.'
+
+$rightCardXaml = Read-RepoFile 'raindesk\Control\UserControls\PannelCard\RightCardControl.xaml'
+$rightCardCode = Read-RepoFile 'raindesk\Control\UserControls\PannelCard\RightCardControl.xaml.cs'
+Assert-Contains $rightCardXaml 'Background="#82FBFDFF"' 'Right shortcut card should allow the page background to show through.'
+Assert-Contains $rightCardXaml 'x:Name="WrapCard"[\s\S]*?BorderBrush="Transparent"[\s\S]*?BorderThickness="0"' 'Right shortcut card should not draw a visible outline over the background.'
+Assert-NotContains $rightCardXaml 'raindeskCommandButtonStyle"\s*Click="AddUrlIcon"|raindeskCommandButtonStyle"\s*Click="AddSystemIcon"|Text="URL"|Text="系统项目"' 'Shortcut panel title bar must not show top-right add buttons.'
+Assert-Contains $rightCardXaml 'Padding="14,10,14,12"' 'Right shortcut card should use tighter top padding.'
+Assert-Contains $rightCardXaml 'x:Name="TitleRow" Height="0"' 'Shortcut home view should hide the title row by default.'
+Assert-Contains $rightCardXaml 'x:Name="TitleBar"[\s\S]*?Visibility="Collapsed"' 'Shortcut home view should not render the My Shortcuts title bar.'
+Assert-Contains $rightCardXaml 'x:Name="GroupBar"[\s\S]*?Margin="0"' 'Shortcut group bar should sit at the top of the card.'
+Assert-Contains $rightCardXaml 'x:Name="GroupBar"[\s\S]*?HorizontalAlignment="Stretch"' 'Shortcut group bar must stretch so overflow can scroll.'
+Assert-Contains $rightCardXaml 'Grid.Row="2" Margin="0,6,0,0"' 'Shortcut grid should sit close to the group bar.'
+Assert-Contains $rightCardXaml 'x:Key="MyListViewItemStyle"[\s\S]*?Property="Margin" Value="1,0,1,0"' 'Shortcut cards should use compact outer spacing.'
+Assert-Contains $rightCardXaml 'x:Key="MyListViewItemStyle"[\s\S]*?Background="Transparent"[\s\S]*?BorderBrush="Transparent"' 'Shortcut cards should not show a white card frame by default.'
+Assert-Contains $rightCardXaml 'VisualState x:Name="Selected"/' 'Shortcut cards should not keep a visible selected frame after click.'
+Assert-NotContains $rightCardXaml 'ShortcutMoreIcon|Glyph="&#xE712;"' 'Shortcut cards must not render the top-right more icon.'
+Assert-Contains $rightCardXaml 'Width="88"[\s\S]*?Height="86"' 'Shortcut cards should reserve enough height for two-line labels.'
+Assert-Contains $rightCardXaml 'ItemsWrapGrid Orientation="Horizontal"[\s\S]*?ItemWidth="\{Binding ShortcutItemSlotWidth_NoWrite' 'Shortcut cards should auto-adjust horizontal spacing like the rebuilt project.'
+Assert-Contains $rightCardXaml 'MaximumRowsOrColumns="\{Binding ShortcutColumnCount_NoWrite' 'Shortcut cards must explicitly apply the computed column count to avoid right-side voids.'
+Assert-Contains $rightCardXaml 'ItemHeight="\{Binding ShortcutItemSlotHeight_NoWrite' 'Shortcut card rows should reserve enough height for two-line labels.'
+Assert-Contains $rightCardXaml 'ItemContainerTransitions[\s\S]*?EntranceThemeTransition[\s\S]*?FromVerticalOffset="16"[\s\S]*?RepositionThemeTransition' 'Shortcut cards must animate in from absent to visible and move with reflow.'
+Assert-Contains $rightCardXaml 'SizeChanged="IconListView_SizeChanged"' 'Shortcut cards must recalculate spacing when the panel width changes.'
+Assert-Contains $rightCardXaml 'x:Name="WrapUFG"[\s\S]*?SizeChanged="ShortcutHost_SizeChanged"' 'Shortcut cards must recalculate spacing from the outer host width.'
+Assert-Contains $rightCardCode 'ShortcutItemSlotWidth_NoWriteProperty' 'Shortcut cards must expose an adaptive item slot width property.'
+Assert-Contains $rightCardCode 'ShortcutItemSlotHeight_NoWriteProperty' 'Shortcut cards must expose a fixed item slot height for two-line labels.'
+Assert-Contains $rightCardCode 'ShortcutColumnCount_NoWriteProperty' 'Shortcut cards must expose the computed column count.'
+Assert-Contains $rightCardCode 'private int shortcutColumnCount' 'Shortcut cards must remember the current column count to avoid breakpoint jitter.'
+Assert-Contains $rightCardCode 'columnHysteresis = 4d' 'Shortcut cards must use hysteresis around column breakpoints.'
+Assert-Contains $rightCardCode 'GetShortcutAvailableWidth' 'Shortcut cards must calculate columns from the outer available width.'
+Assert-Contains $rightCardCode 'ShortcutColumnCount_NoWrite = columns' 'Shortcut cards must apply the computed column count to the wrap grid.'
+Assert-Contains $rightCardCode 'width / columns > maxSlotWidth \+ columnHysteresis' 'Shortcut cards must only add columns after crossing the upper spacing threshold.'
+Assert-Contains $rightCardCode 'width / columns < minSlotWidth - columnHysteresis' 'Shortcut cards must only remove columns after crossing the lower spacing threshold.'
+Assert-Contains $rightCardCode 'CalculateInitialShortcutColumns' 'Shortcut cards must initialize adaptive columns without leaving large right-side gaps.'
+Assert-Contains $rightCardCode 'const double minSlotWidth = 92d' 'Shortcut card slot width should allow more columns in narrow windows.'
+Assert-Contains $rightCardCode 'const double maxSlotWidth = 104d' 'Shortcut card slot width should avoid large gaps between columns.'
+Assert-NotContains $rightCardXaml 'MaximumRowsOrColumns="0"' 'Shortcut card wrap grid must not use a zero row/column limit.'
+Assert-Contains $rightCardXaml 'Width="44"[\s\S]*?Height="44"[\s\S]*?CornerRadius="22"[\s\S]*?Padding="0"[\s\S]*?<Border Width="44"[\s\S]*?Height="44"[\s\S]*?CornerRadius="22"[\s\S]*?<ImageBrush ImageSource="\{Binding BitmapImage\}"[\s\S]*?Stretch="UniformToFill"' 'Shortcut item icons should fill the white circular mask with a consistent clipped size.'
+Assert-NotContains $rightCardXaml '<Border Width="22"[\s\S]*?Height="22"[\s\S]*?CornerRadius="6"[\s\S]*?<ImageBrush ImageSource="\{Binding BitmapImage\}"' 'Shortcut item icons must not render as a small inner square inside the white circle.'
+Assert-Contains $rightCardXaml 'Width="32"[\s\S]*?Height="32"[\s\S]*?CornerRadius="16"[\s\S]*?Glyph="&#xE710;"[\s\S]*?FontSize="18"' 'Add shortcut icon should be smaller than the previous oversized treatment.'
+Assert-Contains $rightCardXaml 'Visibility="\{Binding IsAddShortcut_NoWrite[\s\S]*?StrokeDashArray="4,4"[\s\S]*?StrokeDashCap="Round"' 'Add shortcut tile must keep a visible dashed outer border.'
+Assert-Contains $rightCardXaml 'x:Name="GroupBar"' 'Shortcut groups must be rendered in the right shortcut panel.'
+Assert-Contains $rightCardXaml 'Text="全部"' 'Shortcut groups must include the all group entry.'
+Assert-Contains $rightCardXaml 'x:Name="AllGroupIndicator"[\s\S]*?Width="18"[\s\S]*?Height="3"' 'All shortcut group must keep a visible selected-position indicator.'
+Assert-Contains $rightCardXaml 'x:Name="GroupScrollViewer"[\s\S]*?HorizontalScrollMode="Enabled"[\s\S]*?PointerWheelChanged="GroupScrollViewer_PointerWheelChanged"' 'Shortcut group tabs must support horizontal mouse-wheel scrolling.'
+Assert-Contains $rightCardXaml 'x:Name="GroupScrollViewer"[\s\S]*?Grid.Column="1"[\s\S]*?HorizontalAlignment="Stretch"' 'Shortcut group scroll viewer must occupy the available group-bar width.'
+Assert-Contains $rightCardXaml 'x:Name="GroupListView"[\s\S]*?PointerWheelChanged="GroupScrollViewer_PointerWheelChanged"' 'Shortcut group list must forward mouse wheel events to the horizontal scroller.'
+Assert-Contains $rightCardXaml 'ItemsSource="\{Binding ShortcutGroups_NoWrite' 'Shortcut group tabs must bind to the existing menu groups.'
+Assert-NotContains $rightCardXaml 'ItemsSource="\{x:Bind ShortcutGroups_NoWrite|Text="\{x:Bind MenuName\}|Visibility="\{x:Bind IsSelected_NoWrite' 'Shortcut group tabs should use regular Binding so selection state refreshes with the data context.'
+Assert-Contains $rightCardXaml 'x:Name="GroupListView"[\s\S]*?CanDragItems="True"[\s\S]*?CanReorderItems="True"[\s\S]*?AllowDrop="True"[\s\S]*?ReorderMode="Enabled"' 'Shortcut group tabs must support press-and-drag reordering.'
+Assert-Contains $rightCardXaml 'x:Name="GroupListView"[\s\S]*?DragItemsStarting="GroupListView_DragItemsStarting"[\s\S]*?DragItemsCompleted="GroupListView_DragItemsCompleted"' 'Shortcut group drag reordering must be handled in code so the new order is saved.'
+Assert-NotContains $rightCardXaml 'Content="自定义分组"' 'Shortcut group tabs should use only the plus button for custom group creation.'
+Assert-Contains $rightCardXaml 'Width="22"[\s\S]*?Height="22"[\s\S]*?Click="CreateGroupClick"' 'Shortcut group tabs must keep the plus button for custom group creation.'
+Assert-Contains $rightCardXaml 'MenuFlyout x:Name="GroupContextMenu"[\s\S]*?Text="删除分组"[\s\S]*?Click="DeleteGroupClick"' 'Shortcut group tabs must expose a delete group context action.'
+Assert-Contains $rightCardXaml 'x:Key="CompactGroupMenuItemStyle"[\s\S]*?Property="MinHeight" Value="34"[\s\S]*?Property="Padding" Value="12,6"' 'Shortcut group context menu must use compact menu items.'
+Assert-Contains $rightCardXaml 'MenuFlyout x:Name="GroupContextMenu"[\s\S]*?Text="重命名"[\s\S]*?Click="RenameGroupClick"' 'Shortcut group context menu must expose rename.'
+Assert-Contains $rightCardXaml 'Visibility="\{x:Bind MenuEdit\}"[\s\S]*?LostFocus="GroupEditLostFocusOrEnterDown"[\s\S]*?KeyDown="GroupEditKeyDown"' 'Shortcut group rename must use an inline editor on the group tab.'
+Assert-Contains $rightCardXaml 'Visibility="\{x:Bind NotMenuEdit\}"' 'Shortcut group tabs must hide the label while inline rename is active.'
+Assert-Contains $rightCardXaml 'ContextFlyout" Value="\{StaticResource GroupContextMenu\}"' 'Shortcut group tabs must attach the delete context menu to group items.'
+Assert-Contains $rightCardXaml 'x:Key="GroupListViewItemStyle"[\s\S]*?Property="Margin" Value="0,0,8,0"[\s\S]*?Property="MinWidth" Value="0"' 'Shortcut group tabs should not inherit wide default item spacing.'
+Assert-Contains $rightCardXaml 'Visibility="\{Binding IsSelected_NoWrite, Converter=\{StaticResource MyBoolean2VisibilityConverter\}\}"' 'Shortcut group selected state must reveal the selected-position indicator.'
+Assert-Contains $rightCardXaml 'Text="全部"[\s\S]*?FontSize="14"' 'Shortcut group labels should be readable.'
+Assert-Contains $rightCardXaml '<TextBlock Text="\{Binding MenuName\}"[\s\S]*?FontSize="14"' 'Shortcut group menu labels should use the larger readable font size.'
+Assert-NotContains $rightCardXaml 'MyPoptip|MyPoptipContent' 'Shortcut hover path poptip must not be rendered.'
+
+$leftCardXaml = Read-RepoFile 'raindesk\Control\UserControls\PannelCard\LeftCardControl.xaml'
+Assert-NotContains $leftCardXaml 'Text="待办"[\s\S]*?ToDoList\.Count' 'Left menu card must not show the todo counter.'
+Assert-Contains $leftCardXaml 'Padding="3,2,3,2"' 'Left menu card must use tight compact padding.'
+
+$themeXaml = Read-RepoFile 'raindesk\Control\UserControls\Config\ThemeControl.xaml'
+Assert-Contains $themeXaml 'Click="Cancel_Click"' 'Theme settings cancel button must have a handler.'
+Assert-Contains $themeXaml 'Click="Save_Click"' 'Theme settings save button must have a handler.'
+
+$otherXaml = Read-RepoFile 'raindesk\Control\UserControls\Config\OtherControl.xaml'
+Assert-Contains $otherXaml 'Click="CheckUpdate_Click"' 'Check update button must have a handler.'
+Assert-Contains $otherXaml 'UpdateTypeConvert' 'Other settings must expose update source selection.'
+
+$otherCode = Read-RepoFile 'raindesk\Control\UserControls\Config\OtherControl.xaml.cs'
+Assert-Contains $otherCode 'CheckUpdate_Click' 'OtherControl must implement CheckUpdate_Click.'
+Assert-Contains $otherCode 'UpdateWindow\.Show|ShowInfoDialog' 'Manual update check must show a result.'
+
+$configXaml = Read-RepoFile 'raindesk\Control\Windows\ConfigWindow.xaml'
+Assert-NotContains $configXaml 'Tag="About"|Text="关于"' 'ConfigWindow must not render the About tab.'
+Assert-Contains $configXaml 'ListBoxItem IsSelected="True" Tag="Theme"' 'ConfigWindow must open display settings by default.'
+Assert-NotContains $configXaml 'Close_Button_Click' 'ConfigWindow must not render an extra inner close button.'
+Assert-NotContains $configXaml 'x:Name="RightCard"[\s\S]*?raindeskPanelStyle' 'ConfigWindow right content must not be wrapped in an extra panel box.'
+Assert-NotContains $configXaml 'Style="\{StaticResource BorderBG\}"' 'ConfigWindow must not wrap its content in the old inner box border.'
+
+$configCode = Read-RepoFile 'raindesk\Control\Windows\ConfigWindow.xaml.cs'
+Assert-NotContains $configCode 'AboutControl|RightCard\.Child = about' 'ConfigWindow must not load the About page.'
+Assert-Contains $configCode 'RightCard\.Child = theme' 'ConfigWindow must default to display settings.'
+Assert-NotContains $configCode 'private static readonly AboutControl|private static readonly ThemeControl|private static readonly MotionControl|private static readonly OtherControl' 'ConfigWindow must not reuse static UserControl instances across windows.'
+Assert-NotContains $configCode 'if \(window != null\)\s*\{\s*window\.Close\(\);\s*\}' 'Opening settings twice must activate the existing settings window instead of closing and recreating it.'
+Assert-Contains $configCode 'window\.Activate\(\)' 'Opening settings twice must bring the existing settings window forward.'
+
+$rightCardXaml = Read-RepoFile 'raindesk\Control\UserControls\PannelCard\RightCardControl.xaml'
+Assert-Contains $rightCardXaml 'InlineUrlPanel' 'URL add form must render inline in the right panel.'
+Assert-Contains $rightCardXaml 'InlineSystemPanel' 'System item picker must render inline in the right panel.'
+
+$rightCardCode = Read-RepoFile 'raindesk\Control\UserControls\PannelCard\RightCardControl.xaml.cs'
+Assert-NotContains $rightCardCode 'private void AddUrlIcon[\s\S]*?DialogService\.Show' 'AddUrlIcon must not open an extra dialog.'
+Assert-NotContains $rightCardCode 'private void AddSystemIcon[\s\S]*?SystemItemWindow\.Show\(\)' 'AddSystemIcon must not open an extra window.'
+Assert-Contains $rightCardCode 'ShowInlineUrlPanel|ShowInlineSystemPanel' 'RightCardControl must switch to inline add panels.'
+Assert-Contains $rightCardCode 'TitleRow\.Height\s*=\s*new GridLength\(0\)' 'Shortcut home view must hide the title row in code.'
+Assert-Contains $rightCardCode 'TitleRow\.Height\s*=\s*GridLength\.Auto' 'Inline add views must restore the title row for the back button.'
+Assert-Contains $rightCardCode 'SelectAllGroups' 'RightCardControl must support the all shortcut group.'
+Assert-Contains $rightCardCode 'GroupListView_SelectionChanged' 'RightCardControl must switch shortcuts from the new group bar.'
+Assert-Contains $rightCardCode 'GroupListView_DragItemsStarting' 'RightCardControl must track the selected group before drag reordering.'
+Assert-Contains $rightCardCode 'GroupListView_DragItemsCompleted[\s\S]*?CommonCode\.SaveAppData' 'RightCardControl must save shortcut group order after drag reordering.'
+Assert-Contains $rightCardCode 'SetGroupReorderEnabled\(false\)' 'RightCardControl must disable group drag while the inline rename editor is open.'
+Assert-Contains $rightCardCode 'SetGroupReorderEnabled\(true\)' 'RightCardControl must re-enable group drag after the inline rename editor closes.'
+Assert-Contains $rightCardCode 'GroupScrollViewer_PointerWheelChanged[\s\S]*?ChangeView' 'RightCardControl must translate group mouse wheel movement into horizontal scrolling.'
+Assert-Contains $rightCardCode 'sender as ScrollViewer \?\? GroupScrollViewer' 'RightCardControl must scroll the group bar even when wheel events originate inside the group list.'
+Assert-Contains $rightCardCode 'AllGroupIndicator\.Opacity = isAllSelected \? 1 : 0' 'RightCardControl must keep the All group indicator in sync with the selected group.'
+Assert-Contains $rightCardCode 'EnsureWritableGroupSelected' 'Inline add flows must choose a writable group when launched from All.'
+Assert-Contains $rightCardCode 'DeleteGroupClick' 'RightCardControl must support deleting shortcut groups.'
+Assert-Contains $rightCardCode 'RenameGroupClick[\s\S]*?menuInfo\.MenuEdit = Visibility\.Visible' 'RightCardControl must open the inline group rename editor.'
+Assert-Contains $rightCardCode 'CommitGroupRename[\s\S]*?menuInfo\.MenuName = newName[\s\S]*?CommonCode\.SaveAppData' 'RightCardControl must save renamed shortcut groups.'
+Assert-Contains $rightCardCode 'GroupEditKeyDown[\s\S]*?VirtualKey\.Enter[\s\S]*?VirtualKey\.Escape' 'RightCardControl must support Enter and Escape while renaming groups.'
+Assert-Contains $rightCardCode 'DeleteGroup\(MenuInfo menuInfo\)' 'RightCardControl must remove deleted shortcut groups from the data model.'
+Assert-NotContains $rightCardCode 'SetShortcutMoreIconVisibility|ShortcutMoreIcon' 'Shortcut more icon logic must be removed.'
+Assert-NotContains $rightCardCode 'MyPoptip|MyPoptipContent' 'Shortcut hover path poptip must not be opened from code.'
+
+$systemItemCode = Read-RepoFile 'raindesk\Control\UserControls\SystemItem\SystemItem.xaml.cs'
+Assert-NotContains $systemItemCode 'sender as StackPanel' 'System item click handler must read the icon from the clicked element tag.'
+
+$uiSmokeScript = Read-RepoFile 'scripts\ui-smoke.ps1'
+Assert-Contains $uiSmokeScript 'UIAutomationClient' 'UI smoke tool must inspect the running app through UI Automation.'
+Assert-Contains $uiSmokeScript 'artifacts\\ui-state' 'UI smoke tool must write state artifacts for debugging.'
+Assert-Contains $uiSmokeScript 'InvokePattern' 'UI smoke tool must click Home, Settings, and Todo through automation.'
+Assert-Contains $uiSmokeScript 'CopyFromScreen' 'UI smoke tool must capture screenshots of the app state.'
+
+if ($failures.Count -gt 0) {
+    Write-Host 'Settings verification failed:'
+    foreach ($failure in $failures) {
+        Write-Host " - $failure"
+    }
+    exit 1
+}
+
+Write-Host 'Settings verification passed.'

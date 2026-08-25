@@ -13,7 +13,7 @@ internal readonly record struct WorkspaceGroupTabWidthMetrics(
         HorizontalChrome: 28d,
         IconSlotWidth: 20d,
         ColumnSpacing: 6d,
-        EditContentWidth: 96d,
+        EditContentWidth: 88d,
         RightMargin: 8d);
 }
 
@@ -31,5 +31,5 @@ internal static class WorkspaceGroupTabWidthCalculator
                 + metrics.ColumnSpacing));
 
     public static double CalculateEdit(WorkspaceGroupTabWidthMetrics metrics) =>
-        metrics.EditContentWidth + metrics.HorizontalChrome;
+        Math.Max(metrics.MinimumWidth, metrics.EditContentWidth);
 }

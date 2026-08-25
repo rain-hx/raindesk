@@ -472,7 +472,7 @@ namespace raindesk.Control.UserControls.PannelCard
             if (rc == null) return;
 
             var shortcutPanel = rc.EnsureWrapUFG();
-            if (appData.AppConfig.ItemSpradeAnimation && shortcutPanel != null)
+            if (MotionPreferences.ShouldAnimate && shortcutPanel != null)
             {
                 shortcutPanel.Visibility = Visibility.Collapsed;
             }
@@ -599,7 +599,7 @@ namespace raindesk.Control.UserControls.PannelCard
             {
                 if (item is global::Windows.Storage.StorageFile file)
                 {
-                    targetMenu.IconList.Add(CommonCode.GetIconInfoByPath(file.Path));
+                    targetMenu.IconList.Add(await CommonCode.GetIconInfoByPathAsync(file.Path));
                 }
             }
 

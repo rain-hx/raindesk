@@ -1,0 +1,178 @@
+name: CI
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+    branches: [main, master]
+
+# CI 门禁：Debug/Release 构建与测试、NuGet 漏洞审计、MSIX 产物校验、
+# 覆盖率收集、图标/设置回归脚本、多架构编译矩阵。同一配置/平台共享
+# obj 目录，必须串行执行，避免并发文件锁。
+jobs:
+  build-and-test:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+
+      # ── Debug build + test (warnings are errors; main project has a per-directory
+      # Nullable baseline, so this guards against new nullability regressions) ──
+      - name: Build Debug
+        run: dotnet build rainspace/rainspace.csproj -c Debug -p:Platform=x64 -warnaserror
+
+      - name: Test Debug
+        run: dotnet test rainspace.Tests/rainspace.Tests.csproj -c Debug -p:Platform=x64 -warnaserror --logger "console;verbosity=minimal" --collect:"XPlat Code Coverage" --results-directory artifacts/coverage/debug
+
+      # ── Release build + test ──
+      - name: Build Release
+        run: dotnet build rainspace/rainspace.csproj -c Release -p:Platform=x64 -warnaserror
+
+      - name: Test Release
+        run: dotnet test rainspace.Tests/rainspace.Tests.csproj -c Release -p:Platform=x64 -warnaserror --logger "console;verbosity=minimal"
+
+      # ── Supply chain: NuGet vulnerability audit ──
+      # Parse the JSON report and FAIL the build on High/Critical advisories,
+      # so the audit is a gate rather than a log-only line.
+      - name: NuGet vulnerability audit
+        shell: pwsh
+        run: |
+          $json = dotnet list rainspace/rainspace.csproj package --vulnerable --include-transitive --format json
+          if ($LASTEXITCODE -ne 0 -and -not ($json -match '"vulnerabilities"')) {
+            Write-Error "dotnet list package --vulnerable failed with exit code $LASTEXITCODE"
+            exit $LASTEXITCODE
+          }
+          $report = $json | Out-String | ConvertFrom-Json
+          $findings = foreach ($project in $report.projects) {
+            foreach ($framework in $project.frameworks) {
+              $all = @($framework.topLevelPackages) + @($framework.transitivePackages)
+              foreach ($package in $all) {
+                foreach ($vuln in $package.vulnerabilities) {
+                  [pscustomobject]@{
+                    Package   = $package.name
+                    Version   = $package.resolvedVersion
+                    Severity  = if ($vuln.severity) { $vuln.severity } else { $vuln.severityText }
+                    Advisory  = $vuln.advisoryurl
+                  }
+                }
+              }
+            }
+          }
+          if (-not $findings) {
+            Write-Host 'NuGet vulnerability audit: no advisories found.'
+            exit 0
+          }
+          Write-Host 'NuGet vulnerability audit found:'
+          $findings | Format-Table -AutoSize | Out-Host
+          $blocking = $findings | Where-Object { $_.Severity -in @('High', 'Critical') }
+          if ($blocking) {
+            Write-Error ("Blocking vulnerabilities found: {0} High/Critical. Fix dependencies before release." -f $blocking.Count)
+            exit 1
+          }
+
+      # ── MSIX package + install/launch/uninstall smoke ──
+      - name: Package MSIX
+        shell: pwsh
+        run: |
+          dotnet publish rainspace/rainspace.csproj -c Release -p:Platform=x64 -p:GenerateAppxPackageOnBuild=true -p:EnableMsixTooling=true -p:WindowsPackageType=MSIX -p:WindowsAppSDKSelfContained=true
+          if (-not (Get-ChildItem -Recurse -Filter "*.msix" -Path rainspace/AppPackages)) {
+            Write-Error "No .msix artifact was produced by the publish step."
+            exit 1
+          }
+          $msix = Get-ChildItem -Recurse -Filter "*.msix" -Path rainspace/AppPackages | Select-Object -First 1
+          Write-Host "MSIX artifact: $($msix.FullName)"
+          $size = $msix.Length
+          if ($size -le 0) {
+            Write-Error "MSIX artifact is empty."
+            exit 1
+          }
+          Write-Host "MSIX_SIZE_BYTES=$size" >> $env:GITHUB_ENV
+
+      - name: MSIX install/launch/uninstall smoke
+        shell: pwsh
+        run: |
+          $msix = Get-ChildItem -Recurse -Filter "*.msix" -Path rainspace/AppPackages | Select-Object -First 1
+          if (-not $msix) { Write-Error "No MSIX artifact to smoke test."; exit 1 }
+          ./scripts/msix-smoke.ps1 -MsixPath $msix.FullName -LaunchTimeoutSeconds 20
+
+      - name: Upload MSIX artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: rainspace-msix
+          path: rainspace/AppPackages/**/*.msix
+          if-no-files-found: error
+
+      # ── Regression scripts ──
+      - name: Verify icon rendering
+        shell: pwsh
+        run: ./scripts/Verify-IconRenderingFix.ps1
+
+      - name: Verify settings
+        shell: pwsh
+        run: ./scripts/verify-settings.ps1
+
+      # ── Coverage gate ──
+      # Baseline (2026-08-13 Debug x64): 18.0% line / 16.2% branch.
+      # The floor is set below baseline so it guards against regression without
+      # blocking until real coverage growth lands.
+      - name: Coverage gate
+        if: always()
+        shell: pwsh
+        run: |
+          $cobertura = Get-ChildItem -Recurse -Filter "coverage.cobertura.xml" -Path artifacts/coverage/debug |
+            Select-Object -First 1
+          if (-not $cobertura) {
+            Write-Host "No coverage report found; skipping gate."
+            exit 0
+          }
+          [xml]$xml = Get-Content $cobertura.FullName
+          $lineRate = [double]$xml.coverage.'line-rate'
+          $branchRate = [double]$xml.coverage.'branch-rate'
+          $linesCovered = [int]$xml.coverage.'lines-covered'
+          $linesValid = [int]$xml.coverage.'lines-valid'
+          Write-Host ("Line coverage: {0:P1} ({1}/{2})" -f $lineRate, $linesCovered, $linesValid)
+          Write-Host ("Branch coverage: {0:P1}" -f $branchRate)
+          if ($lineRate -lt 0.15) {
+            Write-Error "Line coverage {0:P1} fell below floor 15.0%. Do not regress the baseline." -f $lineRate
+            exit 1
+          }
+          $moduleLabels = @('Launcher', 'ImportExport', 'Workspace', 'Services')
+          foreach ($moduleLabel in $moduleLabels) {
+            $pkg = $xml.coverage.packages.package | Where-Object { $_.name -like "*$moduleLabel*" }
+            if ($pkg) {
+              Write-Host ("Module $moduleLabel line coverage: {0:P1}" -f [double]$pkg.'line-rate')
+            }
+          }
+
+      # ── Coverage upload ──
+      - name: Upload coverage report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-cobertura
+          path: artifacts/coverage/**/coverage.cobertura.xml
+          if-no-files-found: warn
+
+  # x86/ARM64 are declared in the project but x64 alone cannot prove they compile.
+  # Compile-only matrix keeps the packaging/UI job focused on x64.
+  multi-arch-compile:
+    needs: build-and-test
+    runs-on: windows-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        platform: [x86, ARM64]
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+
+      - name: Compile ${{ matrix.platform }}
+        run: dotnet build rainspace/rainspace.csproj -c Release -p:Platform=${{ matrix.platform }}

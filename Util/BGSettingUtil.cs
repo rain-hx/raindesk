@@ -164,7 +164,7 @@ namespace raindesk.Util
             {
                 ImageSource = config.BitmapImage,
                 Stretch = Stretch.UniformToFill,
-                Opacity = ToOpacity(config.BgOpacity)
+                Opacity = 1
             };
         }
 
@@ -174,8 +174,7 @@ namespace raindesk.Util
             var brush = new LinearGradientBrush
             {
                 StartPoint = new Point(0, 0),
-                EndPoint = new Point(1, 1),
-                Opacity = ToOpacity(config.BgOpacity)
+                EndPoint = new Point(1, 1)
             };
 
             brush.GradientStops.Add(new GradientStop
@@ -200,13 +199,6 @@ namespace raindesk.Util
             config.ImageByteArr = File.ReadAllBytes(path);
             config.BacImgName = path;
             config.BGStyle = BGStyle.ImgBac;
-        }
-
-        private static double ToOpacity(int value)
-        {
-            if (value < 0) return 0;
-            if (value > 100) return 1;
-            return value / 100.0;
         }
 
         private static Color ParseColor(string value, Color fallback)

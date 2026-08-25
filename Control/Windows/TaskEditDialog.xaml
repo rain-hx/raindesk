@@ -20,8 +20,8 @@
             <Setter Property="Padding" Value="12,5"/>
             <Setter Property="FontSize" Value="14"/>
             <Setter Property="CornerRadius" Value="9"/>
-            <Setter Property="BorderBrush" Value="#DDE5F0"/>
-            <Setter Property="Background" Value="#FBFDFF"/>
+            <Setter Property="BorderBrush" Value="{ThemeResource ControlBorderBrush}"/>
+            <Setter Property="Background" Value="{ThemeResource ControlFillBrush}"/>
         </Style>
         <Style x:Key="TaskActionButtonStyle" TargetType="Button">
             <Setter Property="Height" Value="36"/>
@@ -53,7 +53,7 @@
                        Text="新建任务"
                        FontSize="30"
                        FontWeight="Bold"
-                       Foreground="#071A3D"
+                       Foreground="{ThemeResource AppForegroundBrush}"
                        VerticalAlignment="Center"/>
 
             <ComboBox x:Name="PriorityCombo"
@@ -64,25 +64,25 @@
                       VerticalAlignment="Center">
                 <ComboBoxItem Tag="1">
                     <StackPanel Orientation="Horizontal" Spacing="8">
-                        <FontIcon Glyph="&#xE7C1;" FontFamily="{StaticResource FluentIconFont}" FontSize="14" Foreground="#116DFF"/>
+                        <FontIcon Glyph="&#xE7C1;" FontFamily="{StaticResource FluentIconFont}" FontSize="14" Foreground="{ThemeResource raindeskBlueBrush}"/>
                         <TextBlock Text="优先级：紧急" FontWeight="SemiBold"/>
                     </StackPanel>
                 </ComboBoxItem>
                 <ComboBoxItem Tag="2">
                     <StackPanel Orientation="Horizontal" Spacing="8">
-                        <FontIcon Glyph="&#xE7C1;" FontFamily="{StaticResource FluentIconFont}" FontSize="14" Foreground="#116DFF"/>
+                        <FontIcon Glyph="&#xE7C1;" FontFamily="{StaticResource FluentIconFont}" FontSize="14" Foreground="{ThemeResource raindeskBlueBrush}"/>
                         <TextBlock Text="优先级：高" FontWeight="SemiBold"/>
                     </StackPanel>
                 </ComboBoxItem>
                 <ComboBoxItem Tag="3">
                     <StackPanel Orientation="Horizontal" Spacing="8">
-                        <FontIcon Glyph="&#xE7C1;" FontFamily="{StaticResource FluentIconFont}" FontSize="14" Foreground="#116DFF"/>
+                        <FontIcon Glyph="&#xE7C1;" FontFamily="{StaticResource FluentIconFont}" FontSize="14" Foreground="{ThemeResource raindeskBlueBrush}"/>
                         <TextBlock Text="优先级：中" FontWeight="SemiBold"/>
                     </StackPanel>
                 </ComboBoxItem>
                 <ComboBoxItem Tag="4">
                     <StackPanel Orientation="Horizontal" Spacing="8">
-                        <FontIcon Glyph="&#xE7C1;" FontFamily="{StaticResource FluentIconFont}" FontSize="14" Foreground="#116DFF"/>
+                        <FontIcon Glyph="&#xE7C1;" FontFamily="{StaticResource FluentIconFont}" FontSize="14" Foreground="{ThemeResource raindeskBlueBrush}"/>
                         <TextBlock Text="优先级：低" FontWeight="SemiBold"/>
                     </StackPanel>
                 </ComboBoxItem>
@@ -90,8 +90,8 @@
         </Grid>
 
         <Border Grid.Row="1"
-                Background="#FBFFFFFF"
-                BorderBrush="#DDE7F4"
+                Background="{ThemeResource SurfaceBrush}"
+                BorderBrush="{ThemeResource ControlBorderBrush}"
                 BorderThickness="1"
                 CornerRadius="10"
                 Padding="24,18,24,14"
@@ -109,9 +109,9 @@
                     <StackPanel Spacing="16">
 
                 <StackPanel Spacing="8">
-                    <TextBlock FontWeight="SemiBold" Foreground="#071A3D">
+                    <TextBlock FontWeight="SemiBold" Foreground="{ThemeResource AppForegroundBrush}">
                         <Run Text="标题"/>
-                        <Run Text=" *" Foreground="#EF1C12"/>
+                        <Run Text=" *" Foreground="{ThemeResource ErrorRedDarkBrush}"/>
                     </TextBlock>
                     <TextBox x:Name="TitleBox"
                              Style="{StaticResource TaskFieldTextBoxStyle}"
@@ -120,7 +120,7 @@
                 </StackPanel>
 
                 <StackPanel Spacing="8">
-                    <TextBlock Text="描述" FontWeight="SemiBold" Foreground="#071A3D"/>
+                    <TextBlock Text="描述" FontWeight="SemiBold" Foreground="{ThemeResource AppForegroundBrush}"/>
                     <TextBox x:Name="DescriptionBox"
                              Style="{StaticResource TaskFieldTextBoxStyle}"
                              PlaceholderText="输入任务详情..."
@@ -172,7 +172,7 @@
                                   HorizontalAlignment="Stretch">
                             <ComboBoxItem Tag="None">
                                 <StackPanel Orientation="Horizontal" Spacing="8">
-                                    <FontIcon Glyph="&#xE895;" FontFamily="{StaticResource FluentIconFont}" FontSize="14" Foreground="#50617F"/>
+                                    <FontIcon Glyph="&#xE895;" FontFamily="{StaticResource FluentIconFont}" FontSize="14" Foreground="{ThemeResource SecondaryTextBrush}"/>
                                     <TextBlock Text="不重复"/>
                                 </StackPanel>
                             </ComboBoxItem>
@@ -192,7 +192,7 @@
                              Visibility="Collapsed"/>
                     <TextBlock x:Name="CronValidationText"
                                FontSize="12"
-                               Foreground="#E74C3C"
+                               Foreground="{ThemeResource ErrorRedDarkBrush}"
                                Visibility="Collapsed"/>
                 </StackPanel>
 
@@ -208,11 +208,12 @@
                                  Style="{StaticResource TaskFieldTextBoxStyle}"
                                  PlaceholderText="添加子任务..."/>
                         <Button Grid.Column="1"
-                                Foreground="#0A7CFF"
+                                Foreground="{ThemeResource raindeskBlueBrush}"
                                 Background="Transparent"
                                 BorderThickness="0"
                                 Click="OnAddSubtask"
-                                Padding="16,0">
+                                Padding="16,0"
+                                AutomationProperties.Name="添加子任务">
                             <StackPanel Orientation="Horizontal" Spacing="8">
                                 <FontIcon Glyph="&#xE710;" FontFamily="{StaticResource FluentIconFont}" FontSize="14"/>
                                 <TextBlock Text="添加" FontWeight="SemiBold"/>
@@ -244,7 +245,8 @@
                         <Button Grid.Column="1"
                                 Content="添加"
                                 Click="OnAddTag"
-                                Padding="16,0"/>
+                                Padding="16,0"
+                                AutomationProperties.Name="添加标签"/>
                     </Grid>
                     <ItemsControl x:Name="TagList">
                         <ItemsControl.ItemsPanel>
@@ -275,13 +277,13 @@
                     <Button Grid.Column="1"
                             Content="取消"
                             Style="{StaticResource TaskActionButtonStyle}"
-                            Background="#FAFCFF"
-                            BorderBrush="#E1E8F3"
+                            Background="{ThemeResource ControlFillBrush}"
+                            BorderBrush="{ThemeResource ControlBorderBrush}"
                             BorderThickness="1"
                             Click="CancelButton_Click"/>
                     <Button Grid.Column="2"
                             Style="{StaticResource TaskActionButtonStyle}"
-                            Background="#0A7CFF"
+                            Background="{ThemeResource raindeskBlueBrush}"
                             Foreground="White"
                             BorderThickness="0"
                             Click="SaveButton_Click">

@@ -73,6 +73,7 @@ internal sealed class WorkspaceGroupTabContainerController
         {
             case 0:
                 PrepareContainer(item, menu);
+                item.Visibility = Visibility.Visible;
                 args.RegisterUpdateCallback(Handle);
                 break;
             case 1:
@@ -105,6 +106,7 @@ internal sealed class WorkspaceGroupTabContainerController
 
     private void ResetRecycledContainer(ListViewItem item)
     {
+        item.Visibility = Visibility.Visible;
         item.Opacity = 1;
         item.ClearValue(FrameworkElement.WidthProperty);
         item.Margin = new Thickness(0, 0, 8, 0);

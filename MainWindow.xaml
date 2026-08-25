@@ -25,7 +25,7 @@
                         VerticalAlignment="Stretch"/>
                 <Border x:Name="BGDarkOverlay"
                         x:FieldModifier="public"
-                        Background="#660E1726"
+                        Background="{ThemeResource LauncherBGDarkOverlayBrush}"
                         Opacity="0"
                         HorizontalAlignment="Stretch"
                         VerticalAlignment="Stretch"
@@ -170,7 +170,7 @@
                 </VisualStateGroup>
             </VisualStateManager.VisualStateGroups>
             <Grid.RowDefinitions>
-                <RowDefinition x:Name="TopBarRow" Height="96"/>
+                <RowDefinition x:Name="TopBarRow" Height="Auto"/>
                 <RowDefinition Height="*"/>
             </Grid.RowDefinitions>
             <Grid.ColumnDefinitions>
@@ -191,37 +191,47 @@
                         <ColumnDefinition Width="*"/>
                         <ColumnDefinition Width="Auto"/>
                         <ColumnDefinition Width="Auto"/>
+                        <ColumnDefinition Width="Auto"/>
                     </Grid.ColumnDefinitions>
 
-                    <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Spacing="18">
-                        <Image x:Name="BrandLogo"
-                               Source="ms-appx:///Assets/raindeskLogo.png"
-                               Width="44"
-                               Height="44"
-                               Stretch="Uniform"
-                               AutomationProperties.Name="raindesk Logo"/>
-                        <TextBlock x:Name="BrandTitle"
-                                   Text="raindesk"
-                                   FontSize="28"
-                                   FontWeight="SemiBold"
-                                   Foreground="{ThemeResource AppForegroundBrush}"
-                                   VerticalAlignment="Center"/>
-                    </StackPanel>
+                    <Button x:Name="BrandButton"
+                            Padding="0"
+                            Background="Transparent"
+                            BorderThickness="0"
+                            HorizontalAlignment="Left"
+                            VerticalAlignment="Center"
+                            Click="HomeRailClick"
+                            AutomationProperties.Name="返回应用图标界面"
+                            ToolTipService.ToolTip="应用">
+                        <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Spacing="18">
+                            <Image x:Name="BrandLogo"
+                                   Source="ms-appx:///Assets/raindeskLogo.png"
+                                   Width="38"
+                                   Height="38"
+                                   Stretch="Uniform"/>
+                            <TextBlock x:Name="BrandTitle"
+                                       Text="raindesk"
+                                       FontSize="26"
+                                       FontWeight="SemiBold"
+                                       Foreground="{ThemeResource AppForegroundBrush}"
+                                       VerticalAlignment="Center"/>
+                        </StackPanel>
+                    </Button>
 
                     <Border x:Name="SearchBoxHost"
                             Grid.Column="1"
                             Margin="18,0,18,0"
                             MinWidth="0"
                             MaxWidth="700"
-                            MinHeight="54"
-                            Height="54"
+                            MinHeight="44"
+                            Height="44"
                             VerticalAlignment="Center"
                             HorizontalAlignment="Stretch"
                             Background="{ThemeResource LauncherSearchBackgroundBrush}"
                             BorderBrush="{ThemeResource LauncherShellBorderBrush}"
                             BorderThickness="1"
-                            CornerRadius="27"
-                            Padding="22,0,20,0"
+                            CornerRadius="22"
+                            Padding="18,0,16,0"
                             PointerEntered="SearchBoxHost_PointerEntered"
                             PointerExited="SearchBoxHost_PointerExited">
                         <Grid ColumnSpacing="10">
@@ -281,44 +291,68 @@
 
                     <Button x:Name="TopSettingsButton"
                              Grid.Column="2"
-                             Width="52"
-                             Height="52"
+                             Width="36"
+                             Height="36"
                             Padding="0"
                             HorizontalAlignment="Right"
                             VerticalAlignment="Center"
                              Background="{ThemeResource LauncherSearchBackgroundBrush}"
                              BorderBrush="{ThemeResource LauncherShellBorderBrush}"
                              BorderThickness="1"
-                             CornerRadius="26"
+                             CornerRadius="8"
                              Click="SettingsRailClick"
                              AutomationProperties.Name="设置"
                              ToolTipService.ToolTip="设置"
                              TabIndex="5">
                         <FontIcon Glyph="&#xE713;"
                                   FontFamily="{StaticResource FluentIconFont}"
-                                  FontSize="20"
+                                  FontSize="17"
                                   Foreground="{ThemeResource SecondaryTextBrush}"/>
                     </Button>
 
                     <Button x:Name="PageCloseButton"
                              Grid.Column="3"
-                             Margin="10,0,0,0"
-                             Width="52"
-                             Height="52"
+                             Margin="8,0,0,0"
+                             Width="36"
+                             Height="36"
                              Padding="0"
                              HorizontalAlignment="Right"
                              VerticalAlignment="Center"
                              Background="{ThemeResource LauncherSearchBackgroundBrush}"
                              BorderBrush="{ThemeResource LauncherShellBorderBrush}"
                              BorderThickness="1"
-                             CornerRadius="26"
+                             CornerRadius="8"
                              Click="CloseButtonClick"
                              AutomationProperties.Name="关闭"
                              ToolTipService.ToolTip="关闭窗口 (Alt+F4)"
                              TabIndex="6">
                         <FontIcon Glyph="&#xE711;"
                                   FontFamily="{StaticResource FluentIconFont}"
-                                  FontSize="18"
+                                  FontSize="16"
+                                  Foreground="{ThemeResource SecondaryTextBrush}"/>
+                    </Button>
+
+                    <Button x:Name="TopBarToggleButton"
+                             Grid.Column="4"
+                             Margin="8,0,0,0"
+                             Width="40"
+                             Height="40"
+                             Padding="0"
+                             HorizontalAlignment="Right"
+                             VerticalAlignment="Center"
+                             Background="{ThemeResource LauncherSearchBackgroundBrush}"
+                             BorderBrush="{ThemeResource LauncherShellBorderBrush}"
+                             BorderThickness="1"
+                             CornerRadius="8"
+                             Click="TopBarToggleClick"
+                             AutomationProperties.Name="展开/收起顶部栏"
+                             ToolTipService.ToolTip="展开/收起顶部栏"
+                             TabIndex="7">
+                        <Button.Visibility>Collapsed</Button.Visibility>
+                        <FontIcon x:Name="TopBarToggleIcon"
+                                  Glyph="&#xE70D;"
+                                  FontFamily="{StaticResource FluentIconFont}"
+                                  FontSize="12"
                                   Foreground="{ThemeResource SecondaryTextBrush}"/>
                     </Button>
 
@@ -339,7 +373,7 @@
                                  Grid.ColumnSpan="2"
                                  HorizontalAlignment="Stretch"
                                  VerticalAlignment="Stretch"
-                                 Margin="12,0,28,28"/>
+                                 Margin="12,0,8,8"/>
 
             <Border x:Name="InlineConfigPanel"
                     x:FieldModifier="public"

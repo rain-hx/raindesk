@@ -8,6 +8,8 @@
     <ApplicationTitle>raindesk</ApplicationTitle>
     <ApplicationManifest>app.manifest</ApplicationManifest>
     <Platforms>x86;x64;ARM64</Platforms>
+    <!-- dotnet run 会独立评估启动路径；显式设置默认平台，确保它与构建输出目录一致。 -->
+    <Platform Condition="'$(Platform)' == '' or '$(Platform)' == 'AnyCPU'">x64</Platform>
     <PlatformTarget Condition="'$(Platform)' == ''">x64</PlatformTarget>
     <PlatformTarget Condition="'$(Platform)' != ''">$(Platform)</PlatformTarget>
     <RuntimeIdentifiers>win-x86;win-x64;win-arm64</RuntimeIdentifiers>
@@ -16,25 +18,27 @@
     <RuntimeIdentifier Condition="'$(Platform)' == 'x64'">win-x64</RuntimeIdentifier>
     <RuntimeIdentifier Condition="'$(Platform)' == 'ARM64'">win-arm64</RuntimeIdentifier>
     <UseWinUI>true</UseWinUI>
+    <!-- 未打包应用 ResourceLoader 回退到 PRI 默认语言；指定 zh-CN 确保托盘等本地化文案显示中文。 -->
+    <DefaultLanguage>zh-CN</DefaultLanguage>
     <!-- dotnet run uses the unpackaged path; MSIX remains enabled in Visual Studio
          or when explicitly requested with -p:EnableMsixTooling=true. -->
     <WindowsPackageType Condition="'$(WindowsPackageType)' == '' and '$(BuildingInsideVisualStudio)' != 'true'">None</WindowsPackageType>
     <EnableMsixTooling Condition="'$(EnableMsixTooling)' == '' and '$(BuildingInsideVisualStudio)' == 'true'">true</EnableMsixTooling>
     <EnableMsixTooling Condition="'$(EnableMsixTooling)' == ''">false</EnableMsixTooling>
     <EnableWinAppRunSupport>true</EnableWinAppRunSupport>
-    <!-- The application now lives at the repository root. Keep sibling projects
-         and the legacy pre-move source directory out of SDK default globs. -->
+    <!-- 应用源码位于仓库根目录。将旧位置遗留的构建目录、本地测试项目
+         与辅助工具排除在 SDK 默认通配之外，避免重复编译。 -->
     <DefaultItemExcludes>$(DefaultItemExcludes);raindesk\**;raindesk.Tests\**;tools\**</DefaultItemExcludes>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
-    <!-- Release 在 PublishTrimmed 下触发裁剪分析。以下 IL 告警是历史遗留基线：
-         FileUtil WScript.Shell dynamic 调用、COM P/Invoke、System.Text.Json 反射。
-         允许它们作为已知技术债存在，但 -warnaserror 仍会把新增 CS/Nullable 告警视为错误。 -->
+    <!-- Release 启用 PublishTrimmed 后会触发裁剪分析。IL2026/IL2050/IL2077 是
+         FileUtil 动态调用与 System.Text.Json 反射的历史遗留基线，暂作为已知技术债。
+         新增的 CS/Nullable 告警仍按错误处理。 -->
     <WarningsNotAsErrors>IL2026;IL2050;IL2077</WarningsNotAsErrors>
   </PropertyGroup>
 
-  <!-- Allow test project to access internal types -->
+  <!-- 本地测试项目需要访问内部类型；该测试项目不在发布仓库中。 -->
   <ItemGroup>
     <InternalsVisibleTo Include="raindesk.Tests" />
   </ItemGroup>

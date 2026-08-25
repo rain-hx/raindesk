@@ -155,12 +155,12 @@ public sealed partial class MainWindow
             ? SearchBoxHost.ActualHeight
             : SearchBoxHost.Height;
 
-        if (dropDownWidth <= 0d)
+        if (!IsUsableDimension(dropDownWidth))
         {
             dropDownWidth = 420d;
         }
 
-        if (dropDownTop <= 0d)
+        if (!IsUsableDimension(dropDownTop))
         {
             dropDownTop = 44d;
         }
@@ -176,6 +176,9 @@ public sealed partial class MainWindow
         SearchResultsDropDown.HorizontalAlignment = HorizontalAlignment.Left;
         SearchResultsDropDown.VerticalAlignment = VerticalAlignment.Top;
     }
+
+    private static bool IsUsableDimension(double value)
+        => !double.IsNaN(value) && !double.IsInfinity(value) && value > 0d;
 
     private void OnSearchBoxTextChanged(string? keyword)
     {

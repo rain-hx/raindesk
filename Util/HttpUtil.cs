@@ -1,6 +1,7 @@
 using System;
 using System.Net.Http;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace raindesk.Util
@@ -10,71 +11,48 @@ namespace raindesk.Util
         private static readonly HttpClient Client = CreateClient();
 
         /// <summary>
-        /// 同步 GET 请求（用于后台线程调用）
-        /// </summary>
-        public static string Get(string? url)
-        {
-            if (!TryCreateUri(url, out Uri? uri)) return "";
-
-            try
-            {
-                using HttpRequestMessage request = new HttpRequestMessage(HttpMethod.Get, uri);
-                request.Headers.UserAgent.ParseAdd("raindesk");
-                using HttpResponseMessage response = Client.Send(request);
-                response.EnsureSuccessStatusCode();
-                return response.Content.ReadAsStringAsync().GetAwaiter().GetResult();
-            }
-            catch (Exception ex)
-            {
-                LogUtil.WriteErrorLog(ex, "GET请求失败: " + url);
-                return "";
-            }
-        }
-
-        /// <summary>
         /// 异步 GET 请求（推荐用于可能在 UI 线程调用的场景）
         /// </summary>
-        public static async Task<string> GetAsync(string? url)
+        public static async Task<string> GetAsync(string? url, CancellationToken cancellationToken = default)
         {
-            if (!TryCreateUri(url, out Uri? uri)) return "";
-
-            try
-            {
-                using HttpRequestMessage request = new HttpRequestMessage(HttpMethod.Get, uri);
-                request.Headers.UserAgent.ParseAdd("raindesk");
-                using HttpResponseMessage response = await Client.SendAsync(request).ConfigureAwait(false);
-                response.EnsureSuccessStatusCode();
-                return await response.Content.ReadAsStringAsync().ConfigureAwait(false);
-            }
-            catch (Exception ex)
-            {
-                LogUtil.WriteErrorLog(ex, "GET异步请求失败: " + url);
-                return "";
-            }
+            return await SendAsync(HttpMethod.Get, url, null, cancellationToken).ConfigureAwait(false);
         }
 
         /// <summary>
-        /// 同步 POST 请求（用于后台线程调用）
+        /// 异步 POST 请求
         /// </summary>
-        public static string Post(string? url, string? data)
+        public static async Task<string> PostAsync(string? url, string? data, CancellationToken cancellationToken = default)
+        {
+            using var content = new StringContent(data ?? "", Encoding.UTF8, "application/json");
+            return await SendAsync(HttpMethod.Post, url, content, cancellationToken).ConfigureAwait(false);
+        }
+
+        private static async Task<string> SendAsync(
+            HttpMethod method,
+            string? url,
+            HttpContent? content,
+            CancellationToken cancellationToken)
         {
             if (!TryCreateUri(url, out Uri? uri)) return "";
 
             try
             {
-                using StringContent content = new StringContent(data ?? "", Encoding.UTF8, "application/json");
-                using HttpRequestMessage request = new HttpRequestMessage(HttpMethod.Post, uri)
+                using HttpRequestMessage request = new HttpRequestMessage(method, uri)
                 {
                     Content = content
                 };
                 request.Headers.UserAgent.ParseAdd("raindesk");
-                using HttpResponseMessage response = Client.Send(request);
+                using HttpResponseMessage response = await Client.SendAsync(request, cancellationToken).ConfigureAwait(false);
                 response.EnsureSuccessStatusCode();
-                return response.Content.ReadAsStringAsync().GetAwaiter().GetResult();
+                return await response.Content.ReadAsStringAsync(cancellationToken).ConfigureAwait(false);
+            }
+            catch (OperationCanceledException)
+            {
+                return "";
             }
             catch (Exception ex)
             {
-                LogUtil.WriteErrorLog(ex, "POST请求失败: " + url);
+                LogUtil.WriteErrorLog(ex, $"{method.Method}异步请求失败: {url}");
                 return "";
             }
         }

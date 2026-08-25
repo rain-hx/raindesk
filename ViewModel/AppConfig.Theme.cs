@@ -76,11 +76,13 @@ public partial class AppConfig
             if (imageByteArr == null || imageByteArr.Length == 0)
             {
                 bacImgName = "系统默认";
-                bitmapImage = ImageUtil.ByteArrToImage(Convert.FromBase64String(Constants.DEFAULT_BAC_IMAGE_BASE64));
+                bitmapImage = ImageUtil.ByteArrToImage(
+                    Convert.FromBase64String(Constants.DEFAULT_BAC_IMAGE_BASE64),
+                    decodePixelWidth: 0);
             }
             else
             {
-                bitmapImage = ImageUtil.ByteArrToImage(imageByteArr);
+                bitmapImage = ImageUtil.ByteArrToImage(imageByteArr, decodePixelWidth: 0);
             }
             return bitmapImage;
         }

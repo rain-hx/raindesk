@@ -22,9 +22,10 @@ public sealed class LauncherExternalImportCoordinator : IDisposable
         int generation = ++_generation;
         try
         {
+            // 不调用 ConfigureAwait(false)：让数据写入与集合变更延续在调用线程
+            // （UI 线程）上执行，保证 CollectionChanged 通知与 ListView 同步发生在同一线程。
             LauncherExternalImportResult result = await _service
-                .ImportAsync(targetGroupId, paths, cancellation.Token)
-                .ConfigureAwait(false);
+                .ImportAsync(targetGroupId, paths, cancellation.Token);
             return generation == _generation && !cancellation.IsCancellationRequested
                 ? result
                 : null;

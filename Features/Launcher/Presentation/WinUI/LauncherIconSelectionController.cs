@@ -29,6 +29,7 @@ internal sealed class LauncherIconSelectionController<TItem>
     private readonly Func<double> _getCardWidth;
     private readonly Func<TItem, bool> _getListSelectedVisual;
     private readonly Action<TItem, bool, bool> _setSelectionVisual;
+    private int _selectionMutationDepth;
 
     public LauncherIconSelectionController(
         Func<ListView?> getListView,
@@ -76,7 +77,26 @@ internal sealed class LauncherIconSelectionController<TItem>
 
     public void HandleSelectionChanged(object? sender, SelectionChangedEventArgs args)
     {
-        SyncVisuals();
+        if (_selectionMutationDepth > 0)
+        {
+            return;
+        }
+
+        bool updateChecked = _isBatchMode();
+        foreach (TItem item in args.RemovedItems.OfType<TItem>())
+        {
+            if (!_isExcluded(item))
+            {
+                _setSelectionVisual(item, false, updateChecked);
+            }
+        }
+        foreach (TItem item in args.AddedItems.OfType<TItem>())
+        {
+            if (!_isExcluded(item))
+            {
+                _setSelectionVisual(item, true, updateChecked);
+            }
+        }
     }
 
     public void SyncVisuals()
@@ -101,9 +121,12 @@ internal sealed class LauncherIconSelectionController<TItem>
     public void ClearSelection()
     {
         _state.ResetAnchor();
-        _getListView()?.SelectedItems.Clear();
+        ListView? listView = _getListView();
+        TItem[] selectedItems = listView?.SelectedItems.OfType<TItem>().ToArray()
+            ?? Array.Empty<TItem>();
+        listView?.SelectedItems.Clear();
         bool updateChecked = _isBatchMode();
-        foreach (TItem item in _getAllItems())
+        foreach (TItem item in selectedItems)
         {
             _setSelectionVisual(item, false, updateChecked);
         }
@@ -162,9 +185,11 @@ internal sealed class LauncherIconSelectionController<TItem>
             || listView.SelectedItems.Count != 1
             || !listView.SelectedItems.Contains(primaryItem))
         {
-            listView.SelectedItems.Clear();
-            listView.SelectedItems.Add(primaryItem);
-            SyncVisuals();
+            RunSelectionMutation(listView, () =>
+            {
+                listView.SelectedItems.Clear();
+                listView.SelectedItems.Add(primaryItem);
+            });
         }
     }
 
@@ -177,12 +202,17 @@ internal sealed class LauncherIconSelectionController<TItem>
             return;
         }
 
-        listView.SelectedItems.Clear();
-        foreach (TItem item in items.OfType<TItem>().Where(item => !_isExcluded(item)))
+        TItem[] replacement = items.OfType<TItem>()
+            .Where(item => !_isExcluded(item))
+            .ToArray();
+        RunSelectionMutation(listView, () =>
         {
-            listView.SelectedItems.Add(item);
-        }
-        SyncVisuals();
+            listView.SelectedItems.Clear();
+            foreach (TItem item in replacement)
+            {
+                listView.SelectedItems.Add(item);
+            }
+        });
     }
 
     public void PrepareDragVisuals(IEnumerable<TItem> items)
@@ -278,7 +308,6 @@ internal sealed class LauncherIconSelectionController<TItem>
         }
 
         _state.SetAnchor(IndexOf(_getVisibleItems(), item));
-        SyncVisuals();
     }
 
     private void SelectRangeTo(TItem item, bool additive, ListView listView)
@@ -291,20 +320,22 @@ internal sealed class LauncherIconSelectionController<TItem>
             return;
         }
 
-        if (!additive)
+        RunSelectionMutation(listView, () =>
         {
-            listView.SelectedItems.Clear();
-        }
-
-        for (int i = range.Value.StartIndex; i <= range.Value.EndIndex; i++)
-        {
-            TItem candidate = items[i];
-            if (!_isExcluded(candidate) && !listView.SelectedItems.Contains(candidate))
+            if (!additive)
             {
-                listView.SelectedItems.Add(candidate);
+                listView.SelectedItems.Clear();
             }
-        }
-        SyncVisuals();
+
+            for (int i = range.Value.StartIndex; i <= range.Value.EndIndex; i++)
+            {
+                TItem candidate = items[i];
+                if (!_isExcluded(candidate) && !listView.SelectedItems.Contains(candidate))
+                {
+                    listView.SelectedItems.Add(candidate);
+                }
+            }
+        });
     }
 
     private bool TryGetItemAtPoint(Point pointInHost, out TItem? item)
@@ -382,11 +413,14 @@ internal sealed class LauncherIconSelectionController<TItem>
             }
         }
 
-        listView.SelectedItems.Clear();
-        foreach (TItem item in selected)
+        RunSelectionMutation(listView, () =>
         {
-            listView.SelectedItems.Add(item);
-        }
+            listView.SelectedItems.Clear();
+            foreach (TItem item in selected)
+            {
+                listView.SelectedItems.Add(item);
+            }
+        });
         if (selected.Count > 0)
         {
             _state.SetAnchor(IndexOf(items, selected[^1]));
@@ -457,6 +491,21 @@ internal sealed class LauncherIconSelectionController<TItem>
             }
         }
         return -1;
+    }
+
+    private void RunSelectionMutation(ListView listView, Action mutation)
+    {
+        _selectionMutationDepth++;
+        try
+        {
+            mutation();
+        }
+        finally
+        {
+            _selectionMutationDepth--;
+        }
+
+        SyncVisuals();
     }
 
     private static bool IsKeyDown(VirtualKey key) =>
